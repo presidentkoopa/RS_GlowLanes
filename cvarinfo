@@ -1,0 +1,132 @@
+// GlowInTheDark 2.0 -- CVars
+//
+// Archived (no "noarchive"), unlike 1.1, so your settings survive a restart.
+//
+// Four lanes:
+//   wf  wall above the floor seam      Sector.SetGlowColor(Sector.floor)
+//   wc  wall below the ceiling seam    Sector.SetGlowColor(Sector.ceiling)
+//   fg  the floor's own face           Sector.SetFlatGlowColor(Sector.floor)
+//   cg  the ceiling's own face         Sector.SetFlatGlowColor(Sector.ceiling)
+//
+// Reach means different axes per system and this is easy to trip over:
+// *_reach on wf/wc is VERTICAL along the wall; on fg/cg it is HORIZONTAL,
+// inward from the nearest edge. Same name in the engine too (GlowHeight vs
+// FlatGlowHeight) -- see mapdata.zs:593.
+
+// ---------------------------------------------------------------- master --
+server bool  gitd_enabled      = true;
+server int   gitd_preset       = 1;
+server bool  gitd_shuffle      = false;
+server int   gitd_ondeath      = 0;       // 0 off, 1 new colours, 2 new preset
+
+// ------------------------------------------------------------ randomiser --
+// Governs every policy, not just the random one: fixed colour aside, all
+// colour sources land in HSV and get clamped into these windows.
+server int   gitd_seed         = 1337;
+server float gitd_hue_min      = 0.0;
+server float gitd_hue_max      = 360.0;
+server float gitd_sat_min      = 0.35;
+server float gitd_sat_max      = 0.85;
+server float gitd_val_min      = 0.45;
+server float gitd_val_max      = 1.0;
+server bool  gitd_lock_planes  = false;   // floor and ceiling share a colour
+server bool  gitd_light_invert = true;    // light policy: dark rooms glow more
+
+// ------------------------------------------------- lane: wall from floor --
+// policy: 0 fixed, 1 random per sector, 2 texture hash, 3 light level
+// falloff: 0 linear, 1 quadratic, 2 sqrt, 3 exponential
+// far:     0 off, 1 auto-derived, 2 explicit
+server bool  gitd_wf_on        = true;
+server int   gitd_wf_policy    = 1;
+server color gitd_wf_color     = "808080";
+server float gitd_wf_reach     = 64.0;
+server int   gitd_wf_falloff   = 0;
+server float gitd_wf_intensity = 1.0;
+server int   gitd_wf_far       = 1;
+server color gitd_wf_farcolor  = "000000";
+
+// ----------------------------------------------- lane: wall from ceiling --
+server bool  gitd_wc_on        = true;
+server int   gitd_wc_policy    = 1;
+server color gitd_wc_color     = "808080";
+server float gitd_wc_reach     = 64.0;
+server int   gitd_wc_falloff   = 0;
+server float gitd_wc_intensity = 1.0;
+server int   gitd_wc_far       = 1;
+server color gitd_wc_farcolor  = "000000";
+
+// -------------------------------------------------- lane: floor own face --
+server bool  gitd_fg_on        = true;
+server int   gitd_fg_policy    = 1;
+server color gitd_fg_color     = "808080";
+server float gitd_fg_reach     = 96.0;
+server int   gitd_fg_falloff   = 0;
+server float gitd_fg_intensity = 1.0;
+server int   gitd_fg_far       = 1;
+server color gitd_fg_farcolor  = "000000";
+
+// ------------------------------------------------ lane: ceiling own face --
+server bool  gitd_cg_on        = true;
+server int   gitd_cg_policy    = 1;
+server color gitd_cg_color     = "808080";
+server float gitd_cg_reach     = 96.0;
+server int   gitd_cg_falloff   = 0;
+server float gitd_cg_intensity = 1.0;
+server int   gitd_cg_far       = 1;
+server color gitd_cg_farcolor  = "000000";
+
+// --------------------------------------------------------------- liquids --
+// Sectors whose floor TerrainDef.IsLiquid overrides the fg lane. This is the
+// replacement for 1.1's gldefs.bm, and it does what GLDEFS could not: lights
+// the liquid's own surface rather than only the wall beside it.
+server bool  gitd_liq_on        = true;
+server int   gitd_liq_policy    = 0;
+server color gitd_liq_color     = "40ff40";
+server float gitd_liq_reach     = 160.0;
+server int   gitd_liq_falloff   = 2;
+server float gitd_liq_intensity = 1.4;
+server int   gitd_liq_far        = 1;
+server color gitd_liq_farcolor   = "000000";
+server bool  gitd_liq_walls     = true;   // also push it up the wall (wf lane)
+
+// ------------------------------------------------------------------ wave --
+// Per-pixel peaks and valleys along a glow. Wavelength 0 = off.
+server float gitd_wave_len       = 0.0;
+server float gitd_wave_speed     = 1.0;
+server float gitd_wave_sharp     = 1.0;
+server int   gitd_wave_shape     = 0;
+server float gitd_wave_reach     = 0.0;
+server float gitd_wave_bright    = 0.0;
+server float gitd_wave_colour    = 0.0;
+server float gitd_wave_detune    = 0.0;
+server float gitd_wave_seed      = 0.0;
+server float gitd_wave_ph_wtop   = 0.0;
+server float gitd_wave_ph_wbot   = 0.0;
+server float gitd_wave_ph_floor  = 0.0;
+server float gitd_wave_ph_ceil   = 0.0;
+server int   gitd_wave_origin    = 0;     // 0 static at map centre, 1 follows you
+
+// -------------------------------------------------------- surface detail --
+// Texture INSIDE the lit area. None of these move a glow's shape.
+server float gitd_tex_noise     = 0.0;
+server float gitd_tex_scale     = 1.0;
+server float gitd_tex_drift     = 0.0;
+server float gitd_tex_contrast  = 1.0;
+
+server float gitd_flow          = 0.0;
+server float gitd_flow_spacing  = 1.0;
+server float gitd_flow_speed    = 1.0;
+server float gitd_flow_sharp    = 1.0;
+
+server float gitd_cell          = 0.0;
+server float gitd_cell_scale    = 1.0;
+server float gitd_cell_speed    = 1.0;
+server float gitd_cell_width    = 0.5;
+
+// react is a strength dial on the engine's fog-disturbance array, which this
+// mod does not populate -- it will do nothing on its own. pulse/level are the
+// self-contained "room's own alarm" and are what the throbbing presets use.
+// See vmthunks.cpp:4125 and hw_viewpointuniforms.h:288.
+server float gitd_react         = 0.0;
+server float gitd_pulse         = 0.0;
+server float gitd_pulse_level   = 0.0;

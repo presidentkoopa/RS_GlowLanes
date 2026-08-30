@@ -1,0 +1,6 @@
+# Built archives -- rebuild from source with any zip tool that writes
+# forward-slash paths. Compress-Archive and .NET Framework's
+# CreateFromDirectory both write backslashes on Windows, which can stop
+# GZDoom resolving the zscript/ includes.
+*.pk3
+*.zip

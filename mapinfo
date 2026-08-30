@@ -1,0 +1,6 @@
+// Without this the handler is never registered and the mod does nothing at
+// all -- no error, no warning, just a map with no glow on it.
+GameInfo
+{
+	AddEventHandlers = "GITD_Handler"
+}

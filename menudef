@@ -1,0 +1,288 @@
+// GlowInTheDark 2.0 -- menus.
+//
+// Unlike 1.1, nothing here needs a map restart. Lane changes re-apply within
+// about a fifth of a second; the wave and surface-detail pages take effect on
+// the next tic.
+
+OptionValue "GITD_Preset"
+{
+	 0, "Vanilla+"
+	 1, "Bioluminescent"
+	 2, "Reactor"
+	 3, "Neon"
+	 4, "Ember"
+	 5, "Frostbite"
+	 6, "Blacklight"
+	 7, "Cathedral"
+	 8, "Pulse"
+	 9, "Hazard"
+	10, "Circuitry"
+	11, "Deep"
+	12, "Furnace"
+	13, "Hellscape"
+	14, "Red Alert"
+	15, "Spore"
+	16, "Signal"
+	17, "Prism"
+}
+
+OptionValue "GITD_OnDeath"
+{
+	0, "Off"
+	1, "New colours (same preset)"
+	2, "New preset"
+}
+
+OptionValue "GITD_Policy"
+{
+	0, "Fixed colour"
+	1, "Random per sector"
+	2, "Texture / material"
+	3, "Light level"
+}
+
+OptionValue "GITD_Falloff"
+{
+	0, "Linear"
+	1, "Quadratic"
+	2, "Square root"
+	3, "Exponential"
+}
+
+OptionValue "GITD_Far"
+{
+	0, "Off (single colour)"
+	1, "Auto-derived"
+	2, "Explicit colour"
+}
+
+OptionValue "GITD_Origin"
+{
+	0, "Static"
+	1, "Follows player"
+}
+
+OptionValue "GITD_LightDir"
+{
+	0, "Bright rooms glow more"
+	1, "Dark rooms glow more"
+}
+
+//----------------------------------------------------------------- main --
+
+OptionMenu "GITDMain"
+{
+	Title "GlowInTheDark"
+	StaticText "Four lanes: two on the walls, two on the floor", "gray"
+	StaticText "and ceiling faces themselves.", "gray"
+	StaticText ""
+	Option "Enabled", "gitd_enabled", "OnOff"
+	StaticText ""
+	Option "Preset", "gitd_preset", "GITD_Preset"
+	Option "Shuffle preset each map", "gitd_shuffle", "OnOff"
+	Option "Randomize on death", "gitd_ondeath", "GITD_OnDeath"
+	StaticText "A preset overwrites every setting below.", "gold"
+	StaticText ""
+	Submenu "Wall Glow  -  Floor Seam", "GITDLaneWF"
+	Submenu "Wall Glow  -  Ceiling Seam", "GITDLaneWC"
+	Submenu "Floor Face", "GITDLaneFG"
+	Submenu "Ceiling Face", "GITDLaneCG"
+	StaticText ""
+	Submenu "Liquids", "GITDLiquid"
+	Submenu "Colour Randomiser", "GITDRandom"
+	StaticText ""
+	Submenu "Wave", "GITDWave"
+	Submenu "Surface Detail", "GITDDetail"
+}
+
+//---------------------------------------------------------------- lanes --
+
+OptionMenu "GITDLaneWF"
+{
+	Title "Wall Glow - Floor Seam"
+	StaticText "Lights the wall just above the floor.", "gray"
+	StaticText "Reach here is VERTICAL, up the wall.", "gray"
+	StaticText ""
+	Option "Enabled", "gitd_wf_on", "OnOff"
+	Option "Colour source", "gitd_wf_policy", "GITD_Policy"
+	ColorPicker "Fixed colour", "gitd_wf_color"
+	StaticText ""
+	Slider "Reach", "gitd_wf_reach", 0, 512, 8, 1
+	Option "Falloff", "gitd_wf_falloff", "GITD_Falloff"
+	Slider "Intensity", "gitd_wf_intensity", 0, 3, 0.05, 2
+	StaticText ""
+	Option "Fades toward", "gitd_wf_far", "GITD_Far"
+	ColorPicker "Explicit fade colour", "gitd_wf_farcolor"
+}
+
+OptionMenu "GITDLaneWC"
+{
+	Title "Wall Glow - Ceiling Seam"
+	StaticText "Lights the wall just below the ceiling.", "gray"
+	StaticText "Reach here is VERTICAL, down the wall.", "gray"
+	StaticText ""
+	Option "Enabled", "gitd_wc_on", "OnOff"
+	Option "Colour source", "gitd_wc_policy", "GITD_Policy"
+	ColorPicker "Fixed colour", "gitd_wc_color"
+	StaticText ""
+	Slider "Reach", "gitd_wc_reach", 0, 512, 8, 1
+	Option "Falloff", "gitd_wc_falloff", "GITD_Falloff"
+	Slider "Intensity", "gitd_wc_intensity", 0, 3, 0.05, 2
+	StaticText ""
+	Option "Fades toward", "gitd_wc_far", "GITD_Far"
+	ColorPicker "Explicit fade colour", "gitd_wc_farcolor"
+}
+
+OptionMenu "GITDLaneFG"
+{
+	Title "Floor Face"
+	StaticText "The floor's own surface, glowing inward", "gray"
+	StaticText "from its edges. Reach is HORIZONTAL here.", "gray"
+	StaticText "1.1 could not light this at all.", "gold"
+	StaticText ""
+	Option "Enabled", "gitd_fg_on", "OnOff"
+	Option "Colour source", "gitd_fg_policy", "GITD_Policy"
+	ColorPicker "Fixed colour", "gitd_fg_color"
+	StaticText ""
+	Slider "Reach", "gitd_fg_reach", 0, 512, 8, 1
+	Option "Falloff", "gitd_fg_falloff", "GITD_Falloff"
+	Slider "Intensity", "gitd_fg_intensity", 0, 3, 0.05, 2
+	StaticText ""
+	Option "Fades toward", "gitd_fg_far", "GITD_Far"
+	ColorPicker "Explicit fade colour", "gitd_fg_farcolor"
+}
+
+OptionMenu "GITDLaneCG"
+{
+	Title "Ceiling Face"
+	StaticText "The ceiling's own surface, glowing inward", "gray"
+	StaticText "from its edges. Reach is HORIZONTAL here.", "gray"
+	StaticText ""
+	Option "Enabled", "gitd_cg_on", "OnOff"
+	Option "Colour source", "gitd_cg_policy", "GITD_Policy"
+	ColorPicker "Fixed colour", "gitd_cg_color"
+	StaticText ""
+	Slider "Reach", "gitd_cg_reach", 0, 512, 8, 1
+	Option "Falloff", "gitd_cg_falloff", "GITD_Falloff"
+	Slider "Intensity", "gitd_cg_intensity", 0, 3, 0.05, 2
+	StaticText ""
+	Option "Fades toward", "gitd_cg_far", "GITD_Far"
+	ColorPicker "Explicit fade colour", "gitd_cg_farcolor"
+}
+
+//-------------------------------------------------------------- liquids --
+
+OptionMenu "GITDLiquid"
+{
+	Title "Liquids"
+	StaticText "Detected from the map's terrain definitions,", "gray"
+	StaticText "so no texture list to maintain. Overrides the", "gray"
+	StaticText "floor lane on liquid sectors.", "gray"
+	StaticText ""
+	Option "Enabled", "gitd_liq_on", "OnOff"
+	Option "Also light the walls above", "gitd_liq_walls", "OnOff"
+	StaticText ""
+	Option "Colour source", "gitd_liq_policy", "GITD_Policy"
+	ColorPicker "Fixed colour", "gitd_liq_color"
+	Slider "Reach", "gitd_liq_reach", 0, 512, 8, 1
+	Option "Falloff", "gitd_liq_falloff", "GITD_Falloff"
+	Slider "Intensity", "gitd_liq_intensity", 0, 3, 0.05, 2
+	StaticText ""
+	Option "Fades toward", "gitd_liq_far", "GITD_Far"
+	ColorPicker "Explicit fade colour", "gitd_liq_farcolor"
+}
+
+//----------------------------------------------------------- randomiser --
+
+OptionMenu "GITDRandom"
+{
+	Title "Colour Randomiser"
+	StaticText "These bound EVERY colour source except", "gray"
+	StaticText "'Fixed' - texture and light keyed colours", "gray"
+	StaticText "land inside this window too.", "gray"
+	StaticText ""
+	Slider "Hue min", "gitd_hue_min", 0, 360, 5, 0
+	Slider "Hue max", "gitd_hue_max", 0, 360, 5, 0
+	StaticText "Max below min wraps through red.", "gold"
+	StaticText ""
+	Slider "Saturation min", "gitd_sat_min", 0, 1, 0.02, 2
+	Slider "Saturation max", "gitd_sat_max", 0, 1, 0.02, 2
+	Slider "Value min", "gitd_val_min", 0, 1, 0.02, 2
+	Slider "Value max", "gitd_val_max", 0, 1, 0.02, 2
+	StaticText ""
+	Slider "Seed", "gitd_seed", 0, 9999, 1, 0
+	Option "Floor and ceiling match", "gitd_lock_planes", "OnOff"
+	Option "Light policy direction", "gitd_light_invert", "GITD_LightDir"
+}
+
+//------------------------------------------------------------------ wave --
+
+OptionMenu "GITDWave"
+{
+	Title "Wave"
+	StaticText "Peaks and valleys travelling along a glow,", "gray"
+	StaticText "evaluated per pixel. Wavelength 0 is off.", "gray"
+	StaticText ""
+	Slider "Wavelength", "gitd_wave_len", 0, 800, 10, 0
+	Slider "Speed", "gitd_wave_speed", 0, 4, 0.05, 2
+	Slider "Sharpness", "gitd_wave_sharp", 0, 8, 0.1, 1
+	Slider "Shape", "gitd_wave_shape", 0, 4, 1, 0
+	StaticText ""
+	StaticText "What the wave moves:"
+	Slider "  Reach", "gitd_wave_reach", 0, 1, 0.02, 2
+	Slider "  Brightness", "gitd_wave_bright", 0, 1, 0.02, 2
+	Slider "  Colour boundary", "gitd_wave_colour", 0, 1, 0.02, 2
+	Slider "  Detune", "gitd_wave_detune", 0, 1, 0.02, 2
+	Slider "  Seed", "gitd_wave_seed", 0, 64, 1, 0
+	StaticText ""
+	StaticText "Phase per channel - offset these and the"
+	StaticText "wave climbs the room instead of pulsing flat."
+	Slider "  Wall top", "gitd_wave_ph_wtop", 0, 1, 0.05, 2
+	Slider "  Wall bottom", "gitd_wave_ph_wbot", 0, 1, 0.05, 2
+	Slider "  Floor", "gitd_wave_ph_floor", 0, 1, 0.05, 2
+	Slider "  Ceiling", "gitd_wave_ph_ceil", 0, 1, 0.05, 2
+	StaticText ""
+	Option "Origin", "gitd_wave_origin", "GITD_Origin"
+}
+
+//-------------------------------------------------------- surface detail --
+
+OptionMenu "GITDDetail"
+{
+	Title "Surface Detail"
+	StaticText "Texture INSIDE the lit area. None of these", "gray"
+	StaticText "change a glow's shape - only what it looks", "gray"
+	StaticText "like within it. All off at 0.", "gray"
+	StaticText ""
+	StaticText "Noise"
+	Slider "  Amount", "gitd_tex_noise", 0, 1, 0.02, 2
+	Slider "  Scale", "gitd_tex_scale", 0, 8, 0.1, 1
+	Slider "  Drift", "gitd_tex_drift", 0, 1, 0.02, 2
+	Slider "  Contrast", "gitd_tex_contrast", 0, 4, 0.05, 2
+	StaticText ""
+	StaticText "Flow"
+	Slider "  Amount", "gitd_flow", 0, 1, 0.02, 2
+	Slider "  Spacing", "gitd_flow_spacing", 0, 4, 0.02, 2
+	Slider "  Speed", "gitd_flow_speed", 0, 4, 0.05, 2
+	Slider "  Sharpness", "gitd_flow_sharp", 0, 6, 0.1, 1
+	StaticText ""
+	StaticText "Cells"
+	Slider "  Amount", "gitd_cell", 0, 1, 0.02, 2
+	Slider "  Scale", "gitd_cell_scale", 0, 8, 0.1, 1
+	Slider "  Speed", "gitd_cell_speed", 0, 2, 0.01, 2
+	Slider "  Width", "gitd_cell_width", 0, 1, 0.02, 2
+	StaticText ""
+	StaticText "Alarm"
+	Slider "  Pulse depth", "gitd_pulse", 0, 1, 0.02, 2
+	Slider "  Pulse level", "gitd_pulse_level", 0, 1, 0.02, 2
+	Slider "  Disturbance reach", "gitd_react", 0, 1, 0.02, 2
+	StaticText "Disturbance reach needs another mod to feed", "gold"
+	StaticText "the engine's disturbance array. Inert alone.", "gold"
+}
+
+//---------------------------------------------------------------- hookup --
+
+AddOptionMenu "OptionsMenu"
+{
+	Submenu "GlowInTheDark", "GITDMain"
+}
