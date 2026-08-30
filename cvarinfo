@@ -26,6 +26,16 @@ server int   gitd_ondeath      = 0;       // 0 off, 1 new colours, 2 new preset
 // still overrides it.
 server bool  gitd_seamless     = true;
 
+// Seamless WALLS. Corners fix the join inside one sector; this fixes the join
+// BETWEEN sectors -- the hard vertical line down a wall where a red room meets
+// a blue one, and the hard edge across a floor where two sectors of the same
+// room carry different colours. A Doom room is nearly always several sectors,
+// so without this every step, ledge and doorway is a colour break.
+// Blend 0 = each sector keeps its own colour; 1 = a sector takes its
+// neighbours' average outright.
+server bool  gitd_seamless_walls = true;
+server float gitd_wall_blend      = 0.5;
+
 // ------------------------------------------------------------ randomiser --
 // Governs every policy, not just the random one: fixed colour aside, all
 // colour sources land in HSV and get clamped into these windows.

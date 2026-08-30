@@ -93,6 +93,27 @@ class GITD_Handler : EventHandler
 	private bool liqOn, liqWalls;
 	private bool seamless;
 
+	// SEAMLESS WALLS.
+	//
+	// Corners fix the join inside one sector. This fixes the join BETWEEN
+	// sectors -- the hard vertical line down a wall where a red room meets a
+	// blue one, and the hard edge across a floor where two sectors of the same
+	// room carry different colours. A Doom "room" is nearly always several
+	// sectors, so without this every step, ledge and doorway is a colour break.
+	//
+	// Each sector's colour is pulled toward the average of the sectors it
+	// shares a line with, so colour flows across the map instead of switching
+	// at every boundary.
+	//
+	// This needs every sector's OWN colour resolved before any of them can be
+	// blended -- a sector cannot average against neighbours that have not been
+	// worked out yet. Hence two passes, both chunked: resolve, then blend and
+	// write. The resolve pass touches no engine state at all.
+	private bool wallSeam;
+	private double wallBlend;
+	private Array<int> baseWF, baseWC, baseFG, baseCG;
+	private int phase;      // 0 idle, 1 resolving, 2 applying
+
 	// ---- lifecycle ---------------------------------------------------------
 
 	override void WorldLoaded(WorldEvent e)
@@ -322,16 +343,35 @@ class GITD_Handler : EventHandler
 		seamless = GITD_Util.GetB("gitd_seamless", true)
 			&& GITD_Util.GetF("gitd_wave_len") <= 0.0;
 
+		wallSeam  = GITD_Util.GetB("gitd_seamless_walls", true);
+		wallBlend = clamp(GITD_Util.GetF("gitd_wall_blend", 0.5), 0.0, 1.0);
+
+		int n = Level ? Level.Sectors.Size() : 0;
+		baseWF.Resize(n); baseWC.Resize(n);
+		baseFG.Resize(n); baseCG.Resize(n);
+
 		applyCursor = 0;
+		phase = 1;              // resolve first, then blend and write
 		applying = true;
 	}
 
 	void StepApply()
 	{
-		if (!Level) { applying = false; return; }
+		if (!Level) { applying = false; phase = 0; return; }
 
 		int n = Level.Sectors.Size();
 		int end = min(applyCursor + APPLY_CHUNK, n);
+
+		if (phase == 1)
+		{
+			for (int i = applyCursor; i < end; i++)
+			{
+				ResolveSector(Level.Sectors[i], i);
+			}
+			applyCursor = end;
+			if (applyCursor >= n) { applyCursor = 0; phase = 2; }
+			return;
+		}
 
 		for (int i = applyCursor; i < end; i++)
 		{
@@ -339,7 +379,59 @@ class GITD_Handler : EventHandler
 		}
 
 		applyCursor = end;
-		if (applyCursor >= n) applying = false;
+		if (applyCursor >= n) { applying = false; phase = 0; }
+	}
+
+	// Pass one: each sector's own colour per lane, before any neighbour
+	// blending. Touches no engine state.
+	void ResolveSector(Sector sec, int idx)
+	{
+		if (!sec) return;
+
+		bool liquid = IsLiquid(sec);
+		let floorLane  = (liquid) ? laneLiq : laneFG;
+		let wallLoLane = (liquid && liqWalls) ? laneLiq : laneWF;
+
+		baseWF[idx] = GITD_Util.Pack(Pick(wallLoLane, sec, idx, Sector.floor,   SALT_WF));
+		baseWC[idx] = GITD_Util.Pack(Pick(laneWC,     sec, idx, Sector.ceiling, SALT_WC));
+		baseFG[idx] = GITD_Util.Pack(Pick(floorLane,  sec, idx, Sector.floor,   SALT_FG));
+		baseCG[idx] = GITD_Util.Pack(Pick(laneCG,     sec, idx, Sector.ceiling, SALT_CG));
+	}
+
+	bool IsLiquid(Sector sec)
+	{
+		if (!liqOn) return false;
+		let td = sec.GetFloorTerrain(Sector.floor);
+		return td && td.IsLiquid;
+	}
+
+	// Pull one sector's colour toward the average of the sectors it shares a
+	// line with. Self-references and one-sided lines are skipped -- a map edge
+	// has no neighbour to agree with, and pulling toward yourself is a no-op
+	// that would still drag the average.
+	Color Neighbourly(Sector sec, Array<int> store, int idx)
+	{
+		Color own = GITD_Util.Unpack(store[idx]);
+		if (!wallSeam || wallBlend <= 0.0) return own;
+
+		int r = 0, g = 0, b = 0, cnt = 0;
+		for (int i = 0; i < sec.lines.Size(); i++)
+		{
+			let ln = sec.lines[i];
+			if (!ln) continue;
+
+			Sector other = (ln.frontsector == sec) ? ln.backsector : ln.frontsector;
+			if (!other || other == sec) continue;
+
+			int oi = other.Index();
+			if (oi < 0 || oi >= store.Size()) continue;
+
+			Color oc = GITD_Util.Unpack(store[oi]);
+			r += oc.r; g += oc.g; b += oc.b; cnt++;
+		}
+
+		if (cnt == 0) return own;
+		return GITD_Util.LerpCol(own, Color(255, r / cnt, g / cnt, b / cnt), wallBlend);
 	}
 
 	void ApplySector(Sector sec, int idx)
@@ -350,24 +442,18 @@ class GITD_Handler : EventHandler
 		// policy. This is what replaces 1.1's gldefs.bm, and it does the thing
 		// GLDEFS never could: light the liquid's own surface, not just the
 		// wall beside it.
-		bool liquid = false;
-		if (liqOn)
-		{
-			let td = sec.GetFloorTerrain(Sector.floor);
-			if (td && td.IsLiquid) liquid = true;
-		}
+		bool liquid = IsLiquid(sec);
 
 		let floorLane  = (liquid) ? laneLiq : laneFG;
 		let wallLoLane = (liquid && liqWalls) ? laneLiq : laneWF;
 
-		// Resolve all four colours BEFORE applying any of them. Seamless
-		// corners need both sides of a corner in hand before either one's far
-		// colour can be decided, so resolve and apply have to be separate
-		// passes rather than one call per lane.
-		Color cWF = Pick(wallLoLane, sec, idx, Sector.floor,   SALT_WF);
-		Color cWC = Pick(laneWC,     sec, idx, Sector.ceiling, SALT_WC);
-		Color cFG = Pick(floorLane,  sec, idx, Sector.floor,   SALT_FG);
-		Color cCG = Pick(laneCG,     sec, idx, Sector.ceiling, SALT_CG);
+		// SEAMLESS WALLS -- each lane pulled toward its neighbours across
+		// shared lines, so the boundary between two sectors stops being a hard
+		// line. Resolved in pass one; this reads the finished table.
+		Color cWF = Neighbourly(sec, baseWF, idx);
+		Color cWC = Neighbourly(sec, baseWC, idx);
+		Color cFG = Neighbourly(sec, baseFG, idx);
+		Color cCG = Neighbourly(sec, baseCG, idx);
 
 		// Each lane's own far colour, before any corner work.
 		Color fWF = (wallLoLane) ? wallLoLane.FarFor(cWF) : Color(0, 0, 0, 0);
@@ -526,6 +612,8 @@ class GITD_Handler : EventHandler
 		h = Acc(h, GITD_Util.GetB("gitd_liq_on", true) ? 1 : 0);
 		h = Acc(h, GITD_Util.GetB("gitd_liq_walls", true) ? 1 : 0);
 		h = Acc(h, GITD_Util.GetB("gitd_seamless", true) ? 1 : 0);
+		h = Acc(h, GITD_Util.GetB("gitd_seamless_walls", true) ? 1 : 0);
+		h = Acc(h, int(GITD_Util.GetF("gitd_wall_blend", 0.5) * 1000.0));
 		// Wavelength belongs in the per-sector hash even though the wave
 		// itself is a per-pixel setting: it gates seamless above, so crossing
 		// zero changes what the lanes get written.

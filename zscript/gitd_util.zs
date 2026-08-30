@@ -136,6 +136,28 @@ class GITD_Util
 		return HSV(h - 12.0, clamp(s * 1.15, 0.0, 1.0), v * 0.22);
 	}
 
+	// Packed RGB, for holding a resolved colour per sector between the resolve
+	// and apply passes. Alpha is always 255 here so it does not need storing.
+	clearscope static int Pack(Color c)
+	{
+		return (c.r << 16) | (c.g << 8) | c.b;
+	}
+
+	clearscope static Color Unpack(int v)
+	{
+		return Color(255, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF);
+	}
+
+	// Weighted mix. t=0 is all a, t=1 is all b.
+	clearscope static Color LerpCol(Color a, Color b, double t)
+	{
+		t = clamp(t, 0.0, 1.0);
+		return Color(255,
+			int(a.r + (b.r - a.r) * t + 0.5),
+			int(a.g + (b.g - a.g) * t + 0.5),
+			int(a.b + (b.b - a.b) * t + 0.5));
+	}
+
 	// Midpoint of two colours. Used by the seamless option: the far colour a
 	// corner ramps toward should sit between the two surfaces meeting there,
 	// not favour either one.
