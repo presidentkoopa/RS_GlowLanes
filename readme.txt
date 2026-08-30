@@ -50,6 +50,43 @@ Four colour sources, selectable per lane:
 All of them land in the same HSV window, so the Randomiser page's hue,
 saturation and value ranges bound every source except Fixed.
 
+SEAMLESS CORNERS
+----------------
+
+Options > GlowInTheDark > Seamless corners. On by default.
+
+The gradient at a corner was never missing. The wall's glow fades UPWARD from
+the floor line; the floor's edge glow fades INWARD from that same line. Two
+ramps meeting nose to nose, both at FULL strength exactly where they touch.
+The hard cut is not an absence of blending -- it is the two sides disagreeing
+about what colour to be AT the line they share.
+
+So it is the NEAR colours that have to agree, because they are the ones that
+meet. With this on, both lanes take the junction colour at the line, and each
+lane's own colour becomes its far end. That is what lets a corner still read
+floor-purple into wall-blue rather than collapsing into one flat wash of the
+average.
+
+Reach, falloff and intensity are matched across the junction too. A ramp that
+changes width, curve or brightness halfway across a corner reads as a seam
+even when the colour is continuous.
+
+Two things it deliberately does not do:
+
+* If only one of the two lanes at a corner is enabled there is no corner --
+  just a single glow -- so that lane keeps its own colour rather than agreeing
+  with a surface that is not being drawn.
+
+* It is IGNORED while a Wave is running, enforced in code rather than left to
+  you. The corner works by matching reach across the junction; a wave moves
+  reach per pixel, so undulating one side reopens the seam it just closed and
+  the seam then travels. Six of the presets run waves. Either the room is
+  bounded by continuous colour with no edge, or the edge moves.
+
+Not to be confused with "All four lanes share one colour" on the Randomiser
+page, which forces every lane to the same colour outright. That also removes
+the seam, but by flattening the look, and it does nothing under Fixed.
+
 Liquids are detected via the map's terrain definitions (TerrainDef.IsLiquid),
 not a texture list. They override the floor lane and get their own config.
 This is what replaces 1.1's gldefs.bm, and it lights the liquid's own surface,

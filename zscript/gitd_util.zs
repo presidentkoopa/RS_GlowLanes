@@ -136,6 +136,17 @@ class GITD_Util
 		return HSV(h - 12.0, clamp(s * 1.15, 0.0, 1.0), v * 0.22);
 	}
 
+	// Midpoint of two colours. Used by the seamless option: the far colour a
+	// corner ramps toward should sit between the two surfaces meeting there,
+	// not favour either one.
+	clearscope static Color Blend(Color a, Color b)
+	{
+		return Color(255,
+			(a.r + b.r) / 2,
+			(a.g + b.g) / 2,
+			(a.b + b.b) / 2);
+	}
+
 	// Colour CVars come back with no alpha bits set. Rebuilding with alpha
 	// forced is mandatory -- see the note on HSV() above.
 	// clearscope because GetC() below is, and a clearscope caller cannot reach

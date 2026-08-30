@@ -77,6 +77,12 @@ OptionMenu "GITDMain"
 	StaticText "and ceiling faces themselves.", "gray"
 	StaticText ""
 	Option "Enabled", "gitd_enabled", "OnOff"
+	Option "Seamless corners", "gitd_seamless", "OnOff"
+	StaticText "Wall and floor agree on one colour where", "gray"
+	StaticText "they touch and ramp away to their own, so", "gray"
+	StaticText "the join has no edge.", "gray"
+	StaticText "Ignored while a Wave is running - a moving", "gold"
+	StaticText "reach reopens the corner it just closed.", "gold"
 	StaticText ""
 	Option "Preset", "gitd_preset", "GITD_Preset"
 	Option "Shuffle preset each map", "gitd_shuffle", "OnOff"
@@ -211,7 +217,9 @@ OptionMenu "GITDRandom"
 	Slider "Value max", "gitd_val_max", 0, 1, 0.02, 2
 	StaticText ""
 	Slider "Seed", "gitd_seed", 0, 9999, 1, 0
-	Option "Floor and ceiling match", "gitd_lock_planes", "OnOff"
+	Option "All four lanes share one colour", "gitd_lock_planes", "OnOff"
+	StaticText "Hashed policies only - Fixed keeps its own", "gray"
+	StaticText "per-lane colours regardless.", "gray"
 	Option "Light policy direction", "gitd_light_invert", "GITD_LightDir"
 }
 

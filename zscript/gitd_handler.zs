@@ -48,11 +48,15 @@ class GITD_Lane
 	// The colour this lane fades toward. Auto-derivation is the default
 	// because a hand-picked far colour is the single most tedious thing to
 	// tune and the derived one is right nearly always.
-	Color FarFor(Color near)
+	//
+	// Seamless corners override this afterwards: the lane's own colour becomes
+	// its far end and the junction colour takes the near slot. See the
+	// seamless block in ApplySector.
+	Color FarFor(Color nearCol)
 	{
 		if (farMode == 0) return Color(0, 0, 0, 0);
 		if (farMode == 2) return farCol;
-		return GITD_Util.AutoFar(near);
+		return GITD_Util.AutoFar(nearCol);
 	}
 }
 
@@ -70,6 +74,13 @@ class GITD_Handler : EventHandler
 
 	const PRESET_COUNT = 18;
 
+	// Per-lane hash salts, so a sector's four lanes do not all land on the
+	// same colour under the hashed policies.
+	const SALT_WF = 1;
+	const SALT_WC = 2;
+	const SALT_FG = 3;
+	const SALT_CG = 4;
+
 	private bool applying;
 	private int applyCursor;
 	private uint lastHash;
@@ -80,6 +91,7 @@ class GITD_Handler : EventHandler
 	private GITD_Range range;
 	private GITD_Lane laneWF, laneWC, laneFG, laneCG, laneLiq;
 	private bool liqOn, liqWalls;
+	private bool seamless;
 
 	// ---- lifecycle ---------------------------------------------------------
 
@@ -298,6 +310,17 @@ class GITD_Handler : EventHandler
 
 		liqOn    = GITD_Util.GetB("gitd_liq_on", true);
 		liqWalls = GITD_Util.GetB("gitd_liq_walls", true);
+		// Seamless corners and glow waves are mutually exclusive, and the
+		// exclusion is enforced here rather than left to the user.
+		//
+		// The corner works by matching reach across the junction. A wave moves
+		// reach per pixel, so undulating one side of a corner reopens the seam
+		// it just closed -- and worse, the seam then travels. Either the room
+		// is bounded by continuous colour with no edge, or the edge moves;
+		// it cannot be both. Six of the presets run waves, so silently
+		// dropping seamless while one is live is the only safe reading.
+		seamless = GITD_Util.GetB("gitd_seamless", true)
+			&& GITD_Util.GetF("gitd_wave_len") <= 0.0;
 
 		applyCursor = 0;
 		applying = true;
@@ -334,18 +357,98 @@ class GITD_Handler : EventHandler
 			if (td && td.IsLiquid) liquid = true;
 		}
 
-		let floorLane = (liquid) ? laneLiq : laneFG;
+		let floorLane  = (liquid) ? laneLiq : laneFG;
 		let wallLoLane = (liquid && liqWalls) ? laneLiq : laneWF;
 
-		ApplyWallLane(sec, idx, Sector.floor,   wallLoLane, 0x00000001);
-		ApplyWallLane(sec, idx, Sector.ceiling, laneWC,     0x00000002);
-		ApplyFlatLane(sec, idx, Sector.floor,   floorLane,  0x00000003);
-		ApplyFlatLane(sec, idx, Sector.ceiling, laneCG,     0x00000004);
+		// Resolve all four colours BEFORE applying any of them. Seamless
+		// corners need both sides of a corner in hand before either one's far
+		// colour can be decided, so resolve and apply have to be separate
+		// passes rather than one call per lane.
+		Color cWF = Pick(wallLoLane, sec, idx, Sector.floor,   SALT_WF);
+		Color cWC = Pick(laneWC,     sec, idx, Sector.ceiling, SALT_WC);
+		Color cFG = Pick(floorLane,  sec, idx, Sector.floor,   SALT_FG);
+		Color cCG = Pick(laneCG,     sec, idx, Sector.ceiling, SALT_CG);
+
+		// Each lane's own far colour, before any corner work.
+		Color fWF = (wallLoLane) ? wallLoLane.FarFor(cWF) : Color(0, 0, 0, 0);
+		Color fWC = (laneWC)     ? laneWC.FarFor(cWC)     : Color(0, 0, 0, 0);
+		Color fFG = (floorLane)  ? floorLane.FarFor(cFG)  : Color(0, 0, 0, 0);
+		Color fCG = (laneCG)     ? laneCG.FarFor(cCG)     : Color(0, 0, 0, 0);
+
+		// Effective shape per lane. Seamless has to match these across a
+		// junction too -- a ramp that changes width, curve or brightness
+		// halfway across a corner reads as a seam even when the colour is
+		// continuous.
+		double rWF = LaneReach(wallLoLane), rWC = LaneReach(laneWC);
+		double rFG = LaneReach(floorLane),  rCG = LaneReach(laneCG);
+		int    kWF = LaneFall(wallLoLane),  kWC = LaneFall(laneWC);
+		int    kFG = LaneFall(floorLane),   kCG = LaneFall(laneCG);
+		double iWF = LaneInten(wallLoLane), iWC = LaneInten(laneWC);
+		double iFG = LaneInten(floorLane),  iCG = LaneInten(laneCG);
+
+		bool wfOn = wallLoLane && wallLoLane.on;
+		bool wcOn = laneWC     && laneWC.on;
+		bool fgOn = floorLane  && floorLane.on;
+		bool cgOn = laneCG     && laneCG.on;
+
+		// SEAMLESS CORNERS.
+		//
+		// The gradient at a corner was never missing. The wall's glow fades
+		// UPWARD from the floor line; the floor's edge glow fades INWARD from
+		// that same line. Two ramps meeting nose to nose, both at FULL
+		// strength exactly where they touch. The hard cut is the two sides
+		// disagreeing about what colour to be AT the line they share.
+		//
+		// So it is the NEAR colours that have to agree -- they are the ones
+		// that meet. Both lanes take the junction colour at the line and their
+		// own original colour becomes the far end, which is what lets a corner
+		// still read floor-purple into wall-blue instead of collapsing to one
+		// flat wash of the average.
+		//
+		// A corner needs BOTH surfaces drawn before there is anything to agree
+		// with. With one side off the other keeps its own colour, exactly as
+		// it looked before seamless existed.
+		if (seamless)
+		{
+			if (wfOn && fgOn)
+			{
+				Color join = GITD_Util.Blend(cWF, cFG);
+				fWF = cWF; cWF = join;
+				fFG = cFG; cFG = join;
+				rFG = rWF; kFG = kWF; iFG = iWF;   // flat takes the wall's shape
+			}
+			if (wcOn && cgOn)
+			{
+				Color join = GITD_Util.Blend(cWC, cCG);
+				fWC = cWC; cWC = join;
+				fCG = cCG; cCG = join;
+				rCG = rWC; kCG = kWC; iCG = iWC;
+			}
+		}
+
+		ApplyWallLane(sec, Sector.floor,   wfOn, cWF, fWF, rWF, kWF, iWF);
+		ApplyWallLane(sec, Sector.ceiling, wcOn, cWC, fWC, rWC, kWC, iWC);
+		ApplyFlatLane(sec, Sector.floor,   fgOn, cFG, fFG, rFG, kFG, iFG);
+		ApplyFlatLane(sec, Sector.ceiling, cgOn, cCG, fCG, rCG, kCG, iCG);
 	}
 
-	void ApplyWallLane(Sector sec, int idx, int planePos, GITD_Lane ln, uint salt)
+	double LaneReach(GITD_Lane ln) { return ln ? ln.reach : 0.0; }
+	int    LaneFall(GITD_Lane ln)  { return ln ? ln.falloff : 0; }
+	double LaneInten(GITD_Lane ln) { return ln ? ln.intensity : 1.0; }
+
+	// One lane's colour. Disabled lanes return black, which nothing
+	// downstream reads.
+	Color Pick(GITD_Lane ln, Sector sec, int idx, int planePos, uint salt)
 	{
-		if (!ln || !ln.on)
+		if (!ln || !ln.on) return Color(255, 0, 0, 0);
+		return GITD_Policy.Resolve(sec, idx, planePos, ln.policy,
+			ln.fixedCol, salt, range);
+	}
+
+	void ApplyWallLane(Sector sec, int planePos, bool on,
+		Color nearCol, Color farCol, double reach, int falloff, double inten)
+	{
+		if (!on)
 		{
 			sec.SetGlowColor(planePos, Color(0, 0, 0, 0));
 			sec.SetGlowColorFar(planePos, Color(0, 0, 0, 0));
@@ -353,19 +456,17 @@ class GITD_Handler : EventHandler
 			return;
 		}
 
-		Color c = GITD_Policy.Resolve(sec, idx, planePos, ln.policy,
-			ln.fixedCol, salt, range);
-
-		sec.SetGlowColor(planePos, c);
-		sec.SetGlowHeight(planePos, ln.reach);          // VERTICAL, up the wall
-		sec.SetGlowFalloff(planePos, ln.falloff);
-		sec.SetGlowIntensity(planePos, ln.intensity);   // scales colour, not reach
-		sec.SetGlowColorFar(planePos, ln.FarFor(c));
+		sec.SetGlowColor(planePos, nearCol);
+		sec.SetGlowColorFar(planePos, farCol);
+		sec.SetGlowHeight(planePos, reach);      // VERTICAL, up the wall
+		sec.SetGlowFalloff(planePos, falloff);
+		sec.SetGlowIntensity(planePos, inten);   // scales colour, not reach
 	}
 
-	void ApplyFlatLane(Sector sec, int idx, int planePos, GITD_Lane ln, uint salt)
+	void ApplyFlatLane(Sector sec, int planePos, bool on,
+		Color nearCol, Color farCol, double reach, int falloff, double inten)
 	{
-		if (!ln || !ln.on)
+		if (!on)
 		{
 			sec.SetFlatGlowColor(planePos, Color(0, 0, 0, 0));
 			sec.SetFlatGlowColorFar(planePos, Color(0, 0, 0, 0));
@@ -373,14 +474,11 @@ class GITD_Handler : EventHandler
 			return;
 		}
 
-		Color c = GITD_Policy.Resolve(sec, idx, planePos, ln.policy,
-			ln.fixedCol, salt, range);
-
-		sec.SetFlatGlowColor(planePos, c);
-		sec.SetFlatGlowHeight(planePos, ln.reach);      // HORIZONTAL, inward
-		sec.SetFlatGlowFalloff(planePos, ln.falloff);
-		sec.SetFlatGlowIntensity(planePos, ln.intensity);
-		sec.SetFlatGlowColorFar(planePos, ln.FarFor(c));
+		sec.SetFlatGlowColor(planePos, nearCol);
+		sec.SetFlatGlowColorFar(planePos, farCol);
+		sec.SetFlatGlowHeight(planePos, reach);  // HORIZONTAL, inward from edge
+		sec.SetFlatGlowFalloff(planePos, falloff);
+		sec.SetFlatGlowIntensity(planePos, inten);
 	}
 
 	void ClearAll()
@@ -427,6 +525,11 @@ class GITD_Handler : EventHandler
 
 		h = Acc(h, GITD_Util.GetB("gitd_liq_on", true) ? 1 : 0);
 		h = Acc(h, GITD_Util.GetB("gitd_liq_walls", true) ? 1 : 0);
+		h = Acc(h, GITD_Util.GetB("gitd_seamless", true) ? 1 : 0);
+		// Wavelength belongs in the per-sector hash even though the wave
+		// itself is a per-pixel setting: it gates seamless above, so crossing
+		// zero changes what the lanes get written.
+		h = Acc(h, int(GITD_Util.GetF("gitd_wave_len") * 10.0));
 		h = Acc(h, GITD_Util.GetI("gitd_seed", 1337));
 		h = Acc(h, int(GITD_Util.GetF("gitd_hue_min") * 100.0));
 		h = Acc(h, int(GITD_Util.GetF("gitd_hue_max") * 100.0));

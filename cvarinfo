@@ -19,6 +19,13 @@ server int   gitd_preset       = 1;
 server bool  gitd_shuffle      = false;
 server int   gitd_ondeath      = 0;       // 0 off, 1 new colours, 2 new preset
 
+// Seamless corners. The wall lane and the flat lane meeting at a corner share
+// one fade-toward colour, so the join between them becomes a continuous ramp
+// instead of a visible edge. This is exactly what GlowColorFar exists for --
+// see mapdata.zs:578. On by default; an explicitly picked far colour on a lane
+// still overrides it.
+server bool  gitd_seamless     = true;
+
 // ------------------------------------------------------------ randomiser --
 // Governs every policy, not just the random one: fixed colour aside, all
 // colour sources land in HSV and get clamped into these windows.
