@@ -1,0 +1,2 @@
+alias vgl_reroll "netevent GL_Reroll"
+alias vgl_keep "netevent GL_Keep"

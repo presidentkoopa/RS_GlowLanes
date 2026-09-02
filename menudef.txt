@@ -1,0 +1,165 @@
+// RS_GlowLanes -- RECONSTRUCTED 2026-09-02 from a read of the original taken
+// minutes before the folder was deleted. Every Option / Slider / Submenu /
+// Command row, its cvar and its range is verbatim. What is NOT original: the
+// OptionValue label text, the page titles and any help text -- those were not
+// captured. Preset and style names below are derived from the code (the
+// preset table order and StyleHue's hue bands).
+
+OptionValue "GL_PresetNames"
+{
+	0, "Custom (your colours)"
+	1, "Red alarm"
+	2, "Cold war"
+	3, "Neon unison"
+	4, "Chaos"
+	5, "Toxic"
+	6, "Deep sea"
+}
+
+OptionValue "GL_StyleNames"
+{
+	0, "Anything"
+	1, "Warm"
+	2, "Cool"
+	3, "Harmony"
+}
+
+OptionValue "GL_FalloffNames"
+{
+	0, "Linear"
+	1, "Quadratic"
+	2, "Square root"
+	3, "Exponential"
+}
+
+OptionValue "GL_WaveShapeNames"
+{
+	0, "Sine"
+	1, "Triangle"
+	2, "Square"
+	3, "Sawtooth"
+}
+
+AddOptionMenu "OptionsMenu"
+{
+	Submenu "Glow Lanes", "GL_Main"
+}
+
+OptionMenu "GL_Main"
+{
+	Class "GL_OptionMenu"
+	Title "Glow Lanes"
+	Option "Glow", "vgl_enabled", "OnOff"
+	Option "Blended seams", "vgl_seamless", "OnOff"
+	Slider "Transition speed", "vgl_speed", 1, 30, 1, 0
+	StaticText ""
+	Submenu "Presets", "GL_Presets"
+	Submenu "Randomize", "GL_Randomize"
+	Submenu "Wave", "GL_Wave"
+	Submenu "Customize", "GL_Customize"
+}
+
+OptionMenu "GL_Presets"
+{
+	Class "GL_OptionMenu"
+	Title "Presets"
+	Option "Preset", "vgl_preset", "GL_PresetNames"
+	Option "Freeze", "vgl_frozen", "OnOff"
+	Command "Keep this", "vgl_keep"
+}
+
+OptionMenu "GL_Randomize"
+{
+	Class "GL_OptionMenu"
+	Title "Randomize"
+	Command "Reroll", "vgl_reroll"
+	Option "Style", "vgl_rand_style", "GL_StyleNames"
+}
+
+OptionMenu "GL_Wave"
+{
+	Class "GL_OptionMenu"
+	Title "Wave"
+	Option "Wave", "vgl_wave_on", "OnOff"
+	Slider "Wavelength", "vgl_wave_length", 16, 512, 16, 0
+	Slider "Speed", "vgl_wave_speed", 0.1, 5.0, 0.1, 1
+	Option "Shape", "vgl_wave_shape", "GL_WaveShapeNames"
+}
+
+OptionMenu "GL_Customize"
+{
+	Class "GL_OptionMenu"
+	Title "Customize"
+	Submenu "Wall Bottom", "GL_LaneWB"
+	Submenu "Wall Top", "GL_LaneWT"
+	Submenu "Floor", "GL_LaneFG"
+	Submenu "Ceiling", "GL_LaneCG"
+}
+
+OptionMenu "GL_LaneWB"
+{
+	Class "GL_OptionMenu"
+	Title "Wall Bottom"
+	Slider "  Red", "vgl_wb_r", 0, 255, 15, 0
+	Slider "  Green", "vgl_wb_g", 0, 255, 15, 0
+	Slider "  Blue", "vgl_wb_b", 0, 255, 15, 0
+	Option "Use far color", "vgl_wb_far_on", "OnOff"
+	Slider "  Red", "vgl_wb_far_r", 0, 255, 15, 0
+	Slider "  Green", "vgl_wb_far_g", 0, 255, 15, 0
+	Slider "  Blue", "vgl_wb_far_b", 0, 255, 15, 0
+	Slider "Coverage", "vgl_wb_cov", 0, 512, 8, 0
+	Option "Falloff", "vgl_wb_fall", "GL_FalloffNames"
+	Slider "Intensity", "vgl_wb_inten", 0.0, 3.0, 0.1, 2
+	Option "Lock", "vgl_lock_wb", "OnOff"
+}
+
+OptionMenu "GL_LaneWT"
+{
+	Class "GL_OptionMenu"
+	Title "Wall Top"
+	Slider "  Red", "vgl_wt_r", 0, 255, 15, 0
+	Slider "  Green", "vgl_wt_g", 0, 255, 15, 0
+	Slider "  Blue", "vgl_wt_b", 0, 255, 15, 0
+	Option "Use far color", "vgl_wt_far_on", "OnOff"
+	Slider "  Red", "vgl_wt_far_r", 0, 255, 15, 0
+	Slider "  Green", "vgl_wt_far_g", 0, 255, 15, 0
+	Slider "  Blue", "vgl_wt_far_b", 0, 255, 15, 0
+	Slider "Coverage", "vgl_wt_cov", 0, 512, 8, 0
+	Option "Falloff", "vgl_wt_fall", "GL_FalloffNames"
+	Slider "Intensity", "vgl_wt_inten", 0.0, 3.0, 0.1, 2
+	Option "Lock", "vgl_lock_wt", "OnOff"
+}
+
+OptionMenu "GL_LaneFG"
+{
+	Class "GL_OptionMenu"
+	Title "Floor"
+	Slider "  Red", "vgl_fg_r", 0, 255, 15, 0
+	Slider "  Green", "vgl_fg_g", 0, 255, 15, 0
+	Slider "  Blue", "vgl_fg_b", 0, 255, 15, 0
+	Option "Use far color", "vgl_fg_far_on", "OnOff"
+	Slider "  Red", "vgl_fg_far_r", 0, 255, 15, 0
+	Slider "  Green", "vgl_fg_far_g", 0, 255, 15, 0
+	Slider "  Blue", "vgl_fg_far_b", 0, 255, 15, 0
+	Slider "Coverage", "vgl_fg_cov", 0, 512, 8, 0
+	Option "Falloff", "vgl_fg_fall", "GL_FalloffNames"
+	Slider "Intensity", "vgl_fg_inten", 0.0, 3.0, 0.1, 2
+	Option "Lock", "vgl_lock_fg", "OnOff"
+}
+
+OptionMenu "GL_LaneCG"
+{
+	Class "GL_OptionMenu"
+	Title "Ceiling"
+	Slider "  Red", "vgl_cg_r", 0, 255, 15, 0
+	Slider "  Green", "vgl_cg_g", 0, 255, 15, 0
+	Slider "  Blue", "vgl_cg_b", 0, 255, 15, 0
+	Option "Use far color", "vgl_cg_far_on", "OnOff"
+	Slider "  Red", "vgl_cg_far_r", 0, 255, 15, 0
+	Slider "  Green", "vgl_cg_far_g", 0, 255, 15, 0
+	Slider "  Blue", "vgl_cg_far_b", 0, 255, 15, 0
+	Slider "Coverage", "vgl_cg_cov", 0, 512, 8, 0
+	Option "Falloff", "vgl_cg_fall", "GL_FalloffNames"
+	Slider "Intensity", "vgl_cg_inten", 0.0, 3.0, 0.1, 2
+	Option "Lock", "vgl_lock_cg", "OnOff"
+}

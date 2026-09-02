@@ -1,0 +1,68 @@
+// RS_GlowLanes -- RECONSTRUCTED 2026-09-02 from a read of the original taken
+// minutes before the folder was deleted. Every declaration and default is
+// verbatim; the original's comments are gone.
+
+server bool vgl_enabled = true;
+server bool vgl_seamless = false;
+server int vgl_preset = 0;
+server int vgl_rand_style = 3;
+server float vgl_speed = 6.0;
+server bool vgl_frozen = false;
+
+server bool vgl_wave_on = false;
+server float vgl_wave_length = 128.0;
+server float vgl_wave_speed = 1.0;
+server int vgl_wave_shape = 0;
+
+server bool vgl_lock_wb = false;
+server bool vgl_lock_wt = false;
+server bool vgl_lock_fg = false;
+server bool vgl_lock_cg = false;
+
+// wall bottom
+server int vgl_wb_r = 212;
+server int vgl_wb_g = 69;
+server int vgl_wb_b = 58;
+server bool vgl_wb_far_on = false;
+server int vgl_wb_far_r = 224;
+server int vgl_wb_far_g = 134;
+server int vgl_wb_far_b = 44;
+server float vgl_wb_cov = 128;
+server int vgl_wb_fall = 1;
+server float vgl_wb_inten = 1.0;
+
+// wall top
+server int vgl_wt_r = 212;
+server int vgl_wt_g = 69;
+server int vgl_wt_b = 58;
+server bool vgl_wt_far_on = false;
+server int vgl_wt_far_r = 224;
+server int vgl_wt_far_g = 134;
+server int vgl_wt_far_b = 44;
+server float vgl_wt_cov = 128;
+server int vgl_wt_fall = 1;
+server float vgl_wt_inten = 1.0;
+
+// floor
+server int vgl_fg_r = 212;
+server int vgl_fg_g = 69;
+server int vgl_fg_b = 58;
+server bool vgl_fg_far_on = false;
+server int vgl_fg_far_r = 224;
+server int vgl_fg_far_g = 134;
+server int vgl_fg_far_b = 44;
+server float vgl_fg_cov = 128;
+server int vgl_fg_fall = 1;
+server float vgl_fg_inten = 1.0;
+
+// ceiling
+server int vgl_cg_r = 212;
+server int vgl_cg_g = 69;
+server int vgl_cg_b = 58;
+server bool vgl_cg_far_on = false;
+server int vgl_cg_far_r = 224;
+server int vgl_cg_far_g = 134;
+server int vgl_cg_far_b = 44;
+server float vgl_cg_cov = 128;
+server int vgl_cg_fall = 1;
+server float vgl_cg_inten = 1.0;
