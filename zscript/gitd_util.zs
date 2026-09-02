@@ -13,7 +13,7 @@ class GITD_Util
 	// Murmur3 finalizer. Cheap, and it avalanches properly -- which matters
 	// here, because the input is a sequential sector index. A weak hash on
 	// 0,1,2,3... gives a gradient across the map instead of a scatter.
-	static uint Hash(uint x)
+	clearscope static uint Hash(uint x)
 	{
 		x ^= x >> 16;
 		x *= 0x7feb352d;
@@ -23,14 +23,14 @@ class GITD_Util
 		return x;
 	}
 
-	static uint Mix(uint a, uint b, uint c)
+	clearscope static uint Mix(uint a, uint b, uint c)
 	{
 		return Hash(Hash(a ^ 0x9e3779b9) ^ Hash(b ^ 0x85ebca6b) ^ Hash(c));
 	}
 
 	// FNV-1a, for texture-name keyed colour: the same flat gets the same
 	// colour everywhere on the map with no hand-written table to maintain.
-	static uint HashString(String s)
+	clearscope static uint HashString(String s)
 	{
 		uint h = 2166136261;
 		int n = s.Length();
@@ -43,21 +43,21 @@ class GITD_Util
 	}
 
 	// A hash as 0..1.
-	static double Unit(uint h)
+	clearscope static double Unit(uint h)
 	{
 		return double(h & 0xFFFFFF) / double(0xFFFFFF);
 	}
 
 	// ---- interpolation -----------------------------------------------------
 
-	static double Lerp(double a, double b, double t)
+	clearscope static double Lerp(double a, double b, double t)
 	{
 		return a + (b - a) * t;
 	}
 
 	// Hue ranges wrap. min 330 / max 30 means "through red", not "everything
 	// except red" -- which is the range you actually want for the warm presets.
-	static double LerpHue(double lo, double hi, double t)
+	clearscope static double LerpHue(double lo, double hi, double t)
 	{
 		if (hi < lo) hi += 360.0;
 		return Lerp(lo, hi, t);
@@ -70,7 +70,7 @@ class GITD_Util
 	// Alpha is ALWAYS 255, and that is not cosmetic: flat glow is gated on
 	// FlatGlowColor.a > 0 (hw_flats.cpp:439). A zero-alpha colour silently
 	// switches the entire lane off with no error anywhere.
-	static Color HSV(double h, double s, double v)
+	clearscope static Color HSV(double h, double s, double v)
 	{
 		h = h - 360.0 * floor(h / 360.0);
 		s = clamp(s, 0.0, 1.0);
@@ -99,7 +99,7 @@ class GITD_Util
 	}
 
 	// Inverse, so the auto far-colour can rotate hue rather than only dim.
-	static void ToHSV(Color c, out double h, out double s, out double v)
+	clearscope static void ToHSV(Color c, out double h, out double s, out double v)
 	{
 		double r = c.r / 255.0;
 		double g = c.g / 255.0;
@@ -129,7 +129,7 @@ class GITD_Util
 	// seam between them stops being an edge (mapdata.zs:578). Real light both
 	// dims and cools as it falls off, so this darkens, enriches slightly, and
 	// rotates a little toward blue.
-	static Color AutoFar(Color base)
+	clearscope static Color AutoFar(Color base)
 	{
 		double h, s, v;
 		ToHSV(base, h, s, v);

@@ -16,23 +16,29 @@ class GITD_Range
 	bool lockPlanes;
 	bool lightInvert;
 
+	// Refilled in place, not reallocated -- see GITD_Lane.Fill for why.
+	clearscope void Fill()
+	{
+		hMin = GITD_Util.GetF("gitd_hue_min", 0.0);
+		hMax = GITD_Util.GetF("gitd_hue_max", 360.0);
+		sMin = GITD_Util.GetF("gitd_sat_min", 0.35);
+		sMax = GITD_Util.GetF("gitd_sat_max", 0.85);
+		vMin = GITD_Util.GetF("gitd_val_min", 0.45);
+		vMax = GITD_Util.GetF("gitd_val_max", 1.0);
+		seed = uint(GITD_Util.GetI("gitd_seed", 1337));
+		lockPlanes = GITD_Util.GetB("gitd_lock_planes", false);
+		lightInvert = GITD_Util.GetB("gitd_light_invert", true);
+	}
+
 	static GITD_Range FromCVars()
 	{
 		GITD_Range r = GITD_Range(new("GITD_Range"));
-		r.hMin = GITD_Util.GetF("gitd_hue_min", 0.0);
-		r.hMax = GITD_Util.GetF("gitd_hue_max", 360.0);
-		r.sMin = GITD_Util.GetF("gitd_sat_min", 0.35);
-		r.sMax = GITD_Util.GetF("gitd_sat_max", 0.85);
-		r.vMin = GITD_Util.GetF("gitd_val_min", 0.45);
-		r.vMax = GITD_Util.GetF("gitd_val_max", 1.0);
-		r.seed = uint(GITD_Util.GetI("gitd_seed", 1337));
-		r.lockPlanes = GITD_Util.GetB("gitd_lock_planes", false);
-		r.lightInvert = GITD_Util.GetB("gitd_light_invert", true);
+		r.Fill();
 		return r;
 	}
 
 	// Three independent 0..1 draws from one hash, mapped into the window.
-	Color FromHash(uint h)
+	clearscope Color FromHash(uint h)
 	{
 		double t1 = GITD_Util.Unit(h);
 		double t2 = GITD_Util.Unit(GITD_Util.Hash(h ^ 0x5bf03635));
@@ -47,7 +53,7 @@ class GITD_Range
 	// One driver value across the whole window -- used by the light policy,
 	// where hue, saturation and value should all move together rather than
 	// varying independently.
-	Color FromScalar(double t)
+	clearscope Color FromScalar(double t)
 	{
 		t = clamp(t, 0.0, 1.0);
 		return GITD_Util.HSV(
@@ -70,7 +76,7 @@ class GITD_Policy
 	// planePos is Sector.floor or Sector.ceiling. salt separates the lanes so
 	// a sector's floor and ceiling do not land on the same colour by accident
 	// -- unless gitd_lock_planes says they should.
-	static Color Resolve(Sector sec, int secIndex, int planePos, int policy,
+	clearscope static Color Resolve(Sector sec, int secIndex, int planePos, int policy,
 		Color fixedCol, uint salt, GITD_Range range)
 	{
 		if (!range) return fixedCol;

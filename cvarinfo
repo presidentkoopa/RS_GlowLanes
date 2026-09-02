@@ -147,3 +147,7 @@ server float gitd_cell_width    = 0.5;
 server float gitd_react         = 0.0;
 server float gitd_pulse         = 0.0;
 server float gitd_pulse_level   = 0.0;
+
+// Internal. The preset index last applied, so a preset only re-applies when
+// it CHANGES -- not on every map load, which used to wipe slider tweaks.
+server int   gitd_preset_applied = -1;

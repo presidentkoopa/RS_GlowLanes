@@ -31,17 +31,27 @@ class GITD_Lane
 	int farMode;        // 0 off, 1 auto-derived, 2 explicit
 	Color farCol;
 
+	// Refill in place rather than returning a fresh object. The apply chain now
+	// runs from UiTick so the menu can re-tint the map while the game is
+	// paused, and `new` is not something to be doing from there -- once per
+	// slider-drag per lane, every drag, for the whole time the menu is open.
+	// The handler allocates these five once and hands them back here.
+	clearscope void Fill(String p)
+	{
+		on        = GITD_Util.GetB(p .. "_on", true);
+		policy    = GITD_Util.GetI(p .. "_policy", 0);
+		fixedCol  = GITD_Util.GetC(p .. "_color");
+		reach     = GITD_Util.GetF(p .. "_reach", 64.0);
+		falloff   = GITD_Util.GetI(p .. "_falloff", 0);
+		intensity = GITD_Util.GetF(p .. "_intensity", 1.0);
+		farMode   = GITD_Util.GetI(p .. "_far", 1);
+		farCol    = GITD_Util.GetC(p .. "_farcolor");
+	}
+
 	static GITD_Lane FromCVars(String p)
 	{
 		GITD_Lane l = GITD_Lane(new("GITD_Lane"));
-		l.on        = GITD_Util.GetB(p .. "_on", true);
-		l.policy    = GITD_Util.GetI(p .. "_policy", 0);
-		l.fixedCol  = GITD_Util.GetC(p .. "_color");
-		l.reach     = GITD_Util.GetF(p .. "_reach", 64.0);
-		l.falloff   = GITD_Util.GetI(p .. "_falloff", 0);
-		l.intensity = GITD_Util.GetF(p .. "_intensity", 1.0);
-		l.farMode   = GITD_Util.GetI(p .. "_far", 1);
-		l.farCol    = GITD_Util.GetC(p .. "_farcolor");
+		l.Fill(p);
 		return l;
 	}
 
@@ -52,7 +62,7 @@ class GITD_Lane
 	// Seamless corners override this afterwards: the lane's own colour becomes
 	// its far end and the junction colour takes the near slot. See the
 	// seamless block in ApplySector.
-	Color FarFor(Color nearCol)
+	clearscope Color FarFor(Color nearCol)
 	{
 		if (farMode == 0) return Color(0, 0, 0, 0);
 		if (farMode == 2) return farCol;
@@ -81,17 +91,16 @@ class GITD_Handler : EventHandler
 	const SALT_FG = 3;
 	const SALT_CG = 4;
 
-	private bool applying;
-	private int applyCursor;
-	private uint lastHash;
-	private int lastPreset;
-	private int pollTimer;
-	private bool wasEnabled;
+	private ui bool applying;
+	private ui int applyCursor;
+	private ui uint lastHash;
+	private ui int pollTimer;
+	private ui bool wasEnabled;
 
-	private GITD_Range range;
-	private GITD_Lane laneWF, laneWC, laneFG, laneCG, laneLiq;
-	private bool liqOn, liqWalls;
-	private bool seamless;
+	private ui GITD_Range range;
+	private ui GITD_Lane laneWF, laneWC, laneFG, laneCG, laneLiq;
+	private ui bool liqOn, liqWalls;
+	private ui bool seamless;
 
 	// SEAMLESS WALLS.
 	//
@@ -109,98 +118,51 @@ class GITD_Handler : EventHandler
 	// blended -- a sector cannot average against neighbours that have not been
 	// worked out yet. Hence two passes, both chunked: resolve, then blend and
 	// write. The resolve pass touches no engine state at all.
-	private bool wallSeam;
-	private double wallBlend;
-	private Array<int> baseWF, baseWC, baseFG, baseCG;
-	private int phase;      // 0 idle, 1 resolving, 2 applying
+	private ui bool wallSeam;
+	private ui double wallBlend;
+	private ui Array<int> baseWF, baseWC, baseFG, baseCG;
+	private ui int phase;      // 0 idle, 1 resolving, 2 applying
+
+	// Which map the ui side last applied to. See UiTick.
+	private ui String mapSig;
+
+	// The UI side's own preset tracker. See UiTick for why it cannot share
+	// lastPreset. uiPresetSeen exists because 0 is a real preset (Vanilla+), so
+	// a zero uiLastPreset cannot be told apart from "not looked yet".
 
 	// ---- lifecycle ---------------------------------------------------------
 
+	// A PRESET APPLIES WHEN IT CHANGES, NOT ON EVERY MAP. Apply is a batch of
+	// CVar writes; running it on every WorldLoaded (and again from UiTick's
+	// first tic) wiped whatever had been tuned on the sliders since the
+	// preset was picked, every level. The last-applied index lives in a CVar
+	// (gitd_preset_applied) because this handler is rebuilt per map. Shuffle
+	// still rolls a new preset per map: it writes gitd_preset, and the sync
+	// sees the change.
 	override void WorldLoaded(WorldEvent e)
 	{
-		lastPreset = GITD_Util.GetI("gitd_preset", 1);
-
 		if (GITD_Util.GetB("gitd_shuffle", false))
-		{
-			// Preset 0 is Vanilla+, which is deliberately the restrained one.
-			// Shuffling into it would read as the mod having failed to load,
-			// so the roll starts at 1.
-			lastPreset = random(1, PRESET_COUNT - 1);
-			GITD_Util.SetI("gitd_preset", lastPreset);
-		}
-
-		GITD_Presets.Apply(lastPreset);
-
-		wasEnabled = GITD_Util.GetB("gitd_enabled", true);
+			GITD_Util.SetI("gitd_preset", random(1, PRESET_COUNT - 1));
+		SyncPreset();
 		PushGlobals();
-		BeginApply();
-
-		// Seed the hash from the settings we just applied, or the first poll
-		// would see a mismatch against zero and redo the whole map for nothing.
-		lastHash = SettingsHash();
-		pollTimer = POLL_TICS;
-
-		// Run the first chunk now rather than next tic, so most maps are lit
-		// on the frame they appear instead of one frame later.
-		if (applying) StepApply();
 	}
 
 	override void WorldTick()
 	{
-		bool enabled = GITD_Util.GetB("gitd_enabled", true);
-
-		if (!enabled)
-		{
-			// Turning the mod off has to actively clear what it wrote --
-			// sector glow is persistent state, not something re-established
-			// each frame. Clear once, then stay quiet.
-			if (wasEnabled)
-			{
-				ClearAll();
-				wasEnabled = false;
-			}
-			return;
-		}
-
-		if (!wasEnabled)
-		{
-			wasEnabled = true;
-			lastHash = 0;
-			BeginApply();
-		}
-
+		if (!GITD_Util.GetB("gitd_enabled", true)) return;
 		PushGlobals();
 		PushWaveOrigin();
-
-		int p = GITD_Util.GetI("gitd_preset", 1);
-		if (p != lastPreset)
-		{
-			lastPreset = p;
-			GITD_Presets.Apply(p);
-			// The preset rewrites every lane CVar, so the settings hash below
-			// will notice on its own -- no need to force an apply here.
-		}
-
-		if (--pollTimer <= 0)
-		{
-			pollTimer = POLL_TICS;
-			uint h = SettingsHash();
-			if (h != lastHash)
-			{
-				lastHash = h;
-				BeginApply();
-			}
-		}
-
-		if (applying) StepApply();
+		SyncPreset();
 	}
 
-	// Reroll on death. Fires for every actor that dies, so the player check is
-	// the whole job.
-	//
-	//   1  new colours -- same preset, new seed. The look holds, the map
-	//      re-tints. Cheap, and it keeps whatever you tuned.
-	//   2  new preset  -- a different look entirely each time you die.
+	clearscope static void SyncPreset()
+	{
+		int want = GITD_Util.GetI("gitd_preset", 1);
+		if (want == GITD_Util.GetI("gitd_preset_applied", -1)) return;
+		GITD_Presets.Apply(want);
+		GITD_Util.SetI("gitd_preset_applied", want);
+	}
+
 	override void WorldThingDied(WorldEvent e)
 	{
 		int mode = GITD_Util.GetI("gitd_ondeath", 0);
@@ -213,11 +175,7 @@ class GITD_Handler : EventHandler
 
 		if (mode == 2)
 		{
-			// Preset 0 is the deliberately restrained one; rolling into it
-			// would read as the mod having switched itself off.
-			lastPreset = random(1, PRESET_COUNT - 1);
-			GITD_Util.SetI("gitd_preset", lastPreset);
-			GITD_Presets.Apply(lastPreset);
+			GITD_Util.SetI("gitd_preset", random(1, PRESET_COUNT - 1));
 		}
 		else
 		{
@@ -295,17 +253,84 @@ class GITD_Handler : EventHandler
 	}
 
 	// Runs while the game is paused and while the menu is open, which
-	// WorldTick does not. Wave, noise, flow, cells and the alarm all move as
-	// you drag their sliders.
+	// WorldTick does not. Everything the mod can change moves as you drag its
+	// slider -- wave, noise, flow, cells, the alarm, AND the four lanes.
 	//
-	// The LANE settings cannot be driven from here: Sector.SetGlowColor and
-	// friends are play scope, not clearscope, so a paused game genuinely
-	// cannot re-tint sectors. Lane edits land the moment you unpause. Making
-	// those four setters clearscope is an engine change, not a mod one.
+	// The lanes used to be excluded here: Sector.SetGlowColor and friends were
+	// play scope, so a paused game could not re-tint sectors and every lane
+	// edit sat dead until you closed the menu -- you could not see the change
+	// you were dragging for. Those twelve setters are clearscope now
+	// (mapdata.zs, Sector and Side), because glow is render state that merely
+	// lives on a play struct: nothing in the simulation reads any of it. So the
+	// whole apply chain runs from here, and the map re-tints under the menu.
+	//
+	// Same poll as WorldTick rather than applying every frame: dragging a
+	// slider changes the settings hash, the hash starts an apply, the apply
+	// walks the map in chunks. Idle menus cost one hash.
 	override void UiTick()
 	{
-		if (!GITD_Util.GetB("gitd_enabled", true)) return;
 		PushGlobals();
+
+		bool enabled = GITD_Util.GetB("gitd_enabled", true);
+
+		if (!enabled)
+		{
+			// Turning the mod off has to actively clear what it wrote -- sector
+			// glow is persistent state, not something re-established each
+			// frame. Clear once, then stay quiet.
+			if (wasEnabled)
+			{
+				ClearAll();
+				wasEnabled = false;
+			}
+			return;
+		}
+
+		if (!Level) return;
+		EnsureLanes();
+
+		// The preset has to be resolved here as well as in WorldTick. A preset
+		// is not a value the apply reads -- it is a batch of CVar writes, and
+		// those only happened on the play side. So while the menu was up,
+		// dragging a slider would eventually have moved the picture but picking
+		// a preset could not, because the CVars it sets were never written.
+		// Tracked separately from WorldTick's lastPreset: that is play state and
+		// UI may not write it. Both sides applying is harmless -- Apply only
+		// writes CVars, and each fires once per change it has not seen.
+		SyncPreset();
+
+		// A fresh level starts with its glow unset, so a new map has to be
+		// re-applied even when not one setting moved and the hash therefore
+		// matches. WorldLoaded used to kick that off; it cannot reach ui state,
+		// so the map is identified from here instead. Name plus sector count
+		// separates a real map change from a mid-level reload of the same one.
+		String sig = Level.MapName .. ":" .. Level.Sectors.Size();
+		if (sig != mapSig)
+		{
+			mapSig = sig;
+			lastHash = 0;          // force the poll below to fire
+			pollTimer = 0;
+		}
+
+		if (!wasEnabled)
+		{
+			wasEnabled = true;
+			lastHash = 0;
+			pollTimer = 0;
+		}
+
+		if (--pollTimer <= 0)
+		{
+			pollTimer = POLL_TICS;
+			uint h = SettingsHash();
+			if (h != lastHash)
+			{
+				lastHash = h;
+				BeginApply();
+			}
+		}
+
+		if (applying) StepApply();
 	}
 
 	// Play scope: resolving "where the player is" reads the world.
@@ -320,14 +345,32 @@ class GITD_Handler : EventHandler
 
 	// ---- applying the lanes ------------------------------------------------
 
-	void BeginApply()
+	// Allocate the six config objects, once. UI scope like the rest of the
+	// apply chain: WorldLoaded used to do this, but play cannot reach ui state,
+	// so the first UiTick that finds a level does it instead.
+	ui void EnsureLanes()
 	{
-		range = GITD_Range.FromCVars();
-		laneWF  = GITD_Lane.FromCVars("gitd_wf");
-		laneWC  = GITD_Lane.FromCVars("gitd_wc");
-		laneFG  = GITD_Lane.FromCVars("gitd_fg");
-		laneCG  = GITD_Lane.FromCVars("gitd_cg");
-		laneLiq = GITD_Lane.FromCVars("gitd_liq");
+		if (!range)   range   = GITD_Range.FromCVars();
+		if (!laneWF)  laneWF  = GITD_Lane.FromCVars("gitd_wf");
+		if (!laneWC)  laneWC  = GITD_Lane.FromCVars("gitd_wc");
+		if (!laneFG)  laneFG  = GITD_Lane.FromCVars("gitd_fg");
+		if (!laneCG)  laneCG  = GITD_Lane.FromCVars("gitd_cg");
+		if (!laneLiq) laneLiq = GITD_Lane.FromCVars("gitd_liq");
+	}
+
+	ui void BeginApply()
+	{
+		// Nothing to apply into yet. UiTick fires before a level has ever
+		// loaded -- the title screen is a menu like any other -- and that is the
+		// one path that reaches here before EnsureLanes has run.
+		if (!range || !laneWF) return;
+
+		range.Fill();
+		laneWF.Fill("gitd_wf");
+		laneWC.Fill("gitd_wc");
+		laneFG.Fill("gitd_fg");
+		laneCG.Fill("gitd_cg");
+		laneLiq.Fill("gitd_liq");
 
 		liqOn    = GITD_Util.GetB("gitd_liq_on", true);
 		liqWalls = GITD_Util.GetB("gitd_liq_walls", true);
@@ -355,7 +398,7 @@ class GITD_Handler : EventHandler
 		applying = true;
 	}
 
-	void StepApply()
+	ui void StepApply()
 	{
 		if (!Level) { applying = false; phase = 0; return; }
 
@@ -384,7 +427,7 @@ class GITD_Handler : EventHandler
 
 	// Pass one: each sector's own colour per lane, before any neighbour
 	// blending. Touches no engine state.
-	void ResolveSector(Sector sec, int idx)
+	ui void ResolveSector(Sector sec, int idx)
 	{
 		if (!sec) return;
 
@@ -398,7 +441,7 @@ class GITD_Handler : EventHandler
 		baseCG[idx] = GITD_Util.Pack(Pick(laneCG,     sec, idx, Sector.ceiling, SALT_CG));
 	}
 
-	bool IsLiquid(Sector sec)
+	ui bool IsLiquid(Sector sec)
 	{
 		if (!liqOn) return false;
 		let td = sec.GetFloorTerrain(Sector.floor);
@@ -409,7 +452,7 @@ class GITD_Handler : EventHandler
 	// line with. Self-references and one-sided lines are skipped -- a map edge
 	// has no neighbour to agree with, and pulling toward yourself is a no-op
 	// that would still drag the average.
-	Color Neighbourly(Sector sec, Array<int> store, int idx)
+	ui Color Neighbourly(Sector sec, Array<int> store, int idx)
 	{
 		Color own = GITD_Util.Unpack(store[idx]);
 		if (!wallSeam || wallBlend <= 0.0) return own;
@@ -434,7 +477,7 @@ class GITD_Handler : EventHandler
 		return GITD_Util.LerpCol(own, Color(255, r / cnt, g / cnt, b / cnt), wallBlend);
 	}
 
-	void ApplySector(Sector sec, int idx)
+	ui void ApplySector(Sector sec, int idx)
 	{
 		if (!sec) return;
 
@@ -518,20 +561,20 @@ class GITD_Handler : EventHandler
 		ApplyFlatLane(sec, Sector.ceiling, cgOn, cCG, fCG, rCG, kCG, iCG);
 	}
 
-	double LaneReach(GITD_Lane ln) { return ln ? ln.reach : 0.0; }
-	int    LaneFall(GITD_Lane ln)  { return ln ? ln.falloff : 0; }
-	double LaneInten(GITD_Lane ln) { return ln ? ln.intensity : 1.0; }
+	ui double LaneReach(GITD_Lane ln) { return ln ? ln.reach : 0.0; }
+	ui int    LaneFall(GITD_Lane ln)  { return ln ? ln.falloff : 0; }
+	ui double LaneInten(GITD_Lane ln) { return ln ? ln.intensity : 1.0; }
 
 	// One lane's colour. Disabled lanes return black, which nothing
 	// downstream reads.
-	Color Pick(GITD_Lane ln, Sector sec, int idx, int planePos, uint salt)
+	ui Color Pick(GITD_Lane ln, Sector sec, int idx, int planePos, uint salt)
 	{
 		if (!ln || !ln.on) return Color(255, 0, 0, 0);
 		return GITD_Policy.Resolve(sec, idx, planePos, ln.policy,
 			ln.fixedCol, salt, range);
 	}
 
-	void ApplyWallLane(Sector sec, int planePos, bool on,
+	ui void ApplyWallLane(Sector sec, int planePos, bool on,
 		Color nearCol, Color farCol, double reach, int falloff, double inten)
 	{
 		if (!on)
@@ -549,7 +592,7 @@ class GITD_Handler : EventHandler
 		sec.SetGlowIntensity(planePos, inten);   // scales colour, not reach
 	}
 
-	void ApplyFlatLane(Sector sec, int planePos, bool on,
+	ui void ApplyFlatLane(Sector sec, int planePos, bool on,
 		Color nearCol, Color farCol, double reach, int falloff, double inten)
 	{
 		if (!on)
@@ -567,7 +610,7 @@ class GITD_Handler : EventHandler
 		sec.SetFlatGlowIntensity(planePos, inten);
 	}
 
-	void ClearAll()
+	ui void ClearAll()
 	{
 		if (!Level) return;
 
@@ -600,7 +643,7 @@ class GITD_Handler : EventHandler
 
 	// Only the per-sector settings belong here. The per-pixel layer is pushed
 	// unconditionally every tic and needs no detection.
-	uint SettingsHash()
+	ui uint SettingsHash()
 	{
 		uint h = 2166136261;
 		h = AccLane(h, "gitd_wf");
@@ -630,7 +673,7 @@ class GITD_Handler : EventHandler
 		return h;
 	}
 
-	uint AccLane(uint h, String p)
+	ui uint AccLane(uint h, String p)
 	{
 		h = Acc(h, GITD_Util.GetB(p .. "_on", true) ? 1 : 0);
 		h = Acc(h, GITD_Util.GetI(p .. "_policy"));
@@ -643,7 +686,7 @@ class GITD_Handler : EventHandler
 		return h;
 	}
 
-	uint Acc(uint h, int v)
+	ui uint Acc(uint h, int v)
 	{
 		h ^= uint(v);
 		h *= 16777619;
