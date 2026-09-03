@@ -35,12 +35,33 @@ class GL_Handler : EventHandler
 		chaosCurWT = RollChaos(); chaosNxtWT = RollChaos();
 		chaosCurFG = RollChaos(); chaosNxtFG = RollChaos();
 		chaosCurCG = RollChaos(); chaosNxtCG = RollChaos();
-		Apply();
+		Advance();
+		Push();
 	}
 
+	// The two halves, and why they are two.
+	//
+	// WorldTick ADVANCES the breathing (phase, setIndex, the chaos colours) and
+	// then pushes the result. UiTick only pushes. So while the options menu is
+	// up the picture updates live under it -- drag a slider or pick a preset and
+	// the room re-tints while you watch -- but the colour cycle holds still,
+	// which is what you want when you are trying to judge a colour anyway.
+	//
+	// This replaces DontPause on the menu. That kept WorldTick running by simply
+	// never pausing the game, which worked, but meant monsters carried on
+	// attacking while you picked colours.
 	override void WorldTick()
 	{
-		Apply();
+		Advance();
+		Push();
+	}
+
+	// UI context: may READ play data but never write it. Push touches no field
+	// of this handler and rolls no dice, which is exactly what makes it legal
+	// from here -- see the note on Advance.
+	override void UiTick()
+	{
+		Push();
 	}
 
 	override void NetworkProcess(ConsoleEvent e)
@@ -49,19 +70,22 @@ class GL_Handler : EventHandler
 		else if (e.Name == "GL_Keep") KeepThis();
 	}
 
-	double PhaseStep()
+	clearscope double PhaseStep()
 	{
 		return 1.0 / (35.0 * max(vgl_speed, 0.5));
 	}
 
-	void Apply()
+	// EVERYTHING THAT MUTATES, and nothing else. Play scope, WorldTick only.
+	//
+	// It owns the animation state -- phase, setIndex, the chaos colours -- and
+	// therefore owns every RollChaos call, which is the part that actually
+	// matters for netplay: frandom advances the RNG, the RNG seed sum IS in the
+	// consistency checksum (d_net.cpp CalculateConsistency), and a client
+	// rolling a colour from unsynchronised menu code would desync the game.
+	// Keeping every roll on this side means the menu cannot reach one.
+	void Advance()
 	{
-		if (!vgl_enabled)
-		{
-			ClearAllLanes();
-			Level.ClearGlowWave();
-			return;
-		}
+		if (!vgl_enabled) return;
 
 		int preset = vgl_preset;
 		bool advanced = false;
@@ -83,8 +107,25 @@ class GL_Handler : EventHandler
 			chaosCurCG = chaosNxtCG; chaosNxtCG = RollChaos();
 		}
 
-		color wbC, wbF, wtC, wtF, fgC, fgF, cgC, cgF;
-		bool wbFarOn, wtFarOn, fgFarOn, cgFarOn;
+		// The Keep button needs to know what is on screen right now. Recorded
+		// here rather than in Push because these are play fields and Push, being
+		// reachable from UI, may not write them.
+		color a, b, c, d, e, f, g, h;
+		bool o1, o2, o3, o4;
+		Resolve(a, b, c, d, e, f, g, h, o1, o2, o3, o4);
+		lastWB = a; lastWBFar = o1 ? b : a;
+		lastWT = c; lastWTFar = o2 ? d : c;
+		lastFG = e; lastFGFar = o3 ? f : e;
+		lastCG = g; lastCGFar = o4 ? h : g;
+	}
+
+	// PURE. Works out what the four lanes should look like from the state as it
+	// stands, without touching any of it. Both ticks go through here.
+	clearscope void Resolve(out color wbC, out color wbF, out color wtC, out color wtF,
+		out color fgC, out color fgF, out color cgC, out color cgF,
+		out bool wbFarOn, out bool wtFarOn, out bool fgFarOn, out bool cgFarOn)
+	{
+		int preset = vgl_preset;
 		if (preset > 0)
 		{
 			GetPresetColor(preset, 0, chaosCurWB, chaosNxtWB, wbC, wbF);
@@ -118,11 +159,26 @@ class GL_Handler : EventHandler
 			wtF = wtC; wtC = ceilJoin; wtFarOn = true;
 			cgF = cgC; cgC = ceilJoin; cgFarOn = true;
 		}
+	}
 
-		lastWB = wbC; lastWBFar = wbFarOn ? wbF : wbC;
-		lastWT = wtC; lastWTFar = wtFarOn ? wtF : wtC;
-		lastFG = fgC; lastFGFar = fgFarOn ? fgF : fgC;
-		lastCG = cgC; lastCGFar = cgFarOn ? cgF : cgC;
+	// EVERYTHING THAT DRAWS, and nothing that mutates. clearscope, so UiTick can
+	// reach it: it reads this handler's fields (UI may read play data) and writes
+	// only to sectors and to the level's wave, all of which take clearscope
+	// setters. It rolls no dice and stores nothing, so calling it from the menu
+	// changes no state that any other client could disagree about.
+	clearscope void Push()
+	{
+		if (!vgl_enabled)
+		{
+			ClearAllLanes();
+			Level.ClearGlowWave();
+			return;
+		}
+
+		color wbC, wbF, wtC, wtF, fgC, fgF, cgC, cgF;
+		bool wbFarOn, wtFarOn, fgFarOn, cgFarOn;
+		Resolve(wbC, wbF, wtC, wtF, fgC, fgF, cgC, cgF,
+			wbFarOn, wtFarOn, fgFarOn, cgFarOn);
 
 		// The far colour is written EVERY time, alpha 0 meaning "no far colour"
 		// (the engine gates on .a). It used to be skipped when far was off, so
@@ -161,7 +217,7 @@ class GL_Handler : EventHandler
 		ApplyWave();
 	}
 
-	void ApplyWave()
+	clearscope void ApplyWave()
 	{
 		if (!vgl_wave_on)
 		{
@@ -174,7 +230,7 @@ class GL_Handler : EventHandler
 		Level.SetGlowWavePhase(0, 0, 0, 0);
 	}
 
-	void ClearAllLanes()
+	clearscope void ClearAllLanes()
 	{
 		for (int i = 0; i < level.Sectors.Size(); i++)
 		{
@@ -186,7 +242,7 @@ class GL_Handler : EventHandler
 		}
 	}
 
-	void GetPresetColor(int preset, int laneOffset, color chaosCur, color chaosNxt, out color cur, out color nxt)
+	clearscope void GetPresetColor(int preset, int laneOffset, color chaosCur, color chaosNxt, out color cur, out color nxt)
 	{
 		if (preset == 4)
 		{
@@ -204,7 +260,7 @@ class GL_Handler : EventHandler
 		nxt = c1;
 	}
 
-	int PresetList(int preset, int idx)
+	clearscope int PresetList(int preset, int idx)
 	{
 		if (preset == 1) return RED_ALARM[idx];
 		if (preset == 2) return COLD_WAR[idx];
@@ -218,7 +274,7 @@ class GL_Handler : EventHandler
 		return HSVtoRGB(frandom(0.0, 360.0), frandom(0.6, 1.0), frandom(0.7, 1.0));
 	}
 
-	static color LerpColor(color a, color b, double t)
+	clearscope static color LerpColor(color a, color b, double t)
 	{
 		int r = int(a.r + (b.r - a.r) * t);
 		int g = int(a.g + (b.g - a.g) * t);
@@ -226,7 +282,7 @@ class GL_Handler : EventHandler
 		return Color(255, r, g, bl);
 	}
 
-	static color HSVtoRGB(double h, double s, double v)
+	clearscope static color HSVtoRGB(double h, double s, double v)
 	{
 		while (h < 0) h += 360.0;
 		while (h >= 360.0) h -= 360.0;
@@ -301,6 +357,11 @@ class GL_OptionMenu : OptionMenu
 		super.Init(parent, desc);
 		DontDim = true;
 		DontBlur = true;
-		DontPause = true;
+
+		// DontPause is deliberately NOT set. It used to be, as the way to keep
+		// the picture live under the menu: never pause, so WorldTick keeps
+		// running. That worked, at the price of monsters carrying on attacking
+		// while you picked colours. The handler pushes from UiTick now, so the
+		// room re-tints under a properly paused game.
 	}
 }
