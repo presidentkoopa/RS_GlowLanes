@@ -136,6 +136,93 @@ class GITD_Presets
 
 	// ---- the eighteen ------------------------------------------------------
 
+	// ---- five built on mechanisms the eighteen never touch --------------------
+
+	// 18 -- signature: the wave measures HEIGHT, not distance from a point.
+	// The crest is a horizontal plane sweeping up through the map, so a
+	// stairwell reads as one rising front rather than as four surfaces taking
+	// turns. Phase is deliberately flat -- per-channel offsets would break the
+	// single front into the sequence Reactor already does.
+	static void Ascent()
+	{
+		Window(200, 260, 0.45, 0.75, 0.55, 1.00);
+		Lane("gitd_wf", true, 1, 0, 0, 0,  85, 2, 1.00);
+		Lane("gitd_wc", true, 1, 0, 0, 0,  85, 2, 0.90);
+		Lane("gitd_fg", true, 1, 0, 0, 0, 150, 2, 1.10);
+		Lane("gitd_cg", true, 1, 0, 0, 0, 120, 2, 0.85);
+		Wave(96, 0.55, 1.6, 5, 0.55, 0.75, 0.30);
+		Phase(0.0, 0.0, 0.0, 0.0);
+		Tex(0.30, 0.075, 0.04, 1.6);
+		Liquid(true, 0, 90, 170, 255, 170, 2, 1.10, true);
+	}
+
+	// 19 -- signature: ONE colour per sector across all four lanes, and no far
+	// ramp anywhere. Each room is a single flat lantern; the variation is
+	// between rooms and never between the surfaces of one.
+	static void Beacon()
+	{
+		Window(20, 55, 0.55, 0.80, 0.60, 1.00);
+		Lane("gitd_wf", true, 1, 0, 0, 0, 110, 0, 0.95, 0);
+		Lane("gitd_wc", true, 1, 0, 0, 0,  90, 0, 0.80, 0);
+		Lane("gitd_fg", true, 1, 0, 0, 0, 170, 0, 1.05, 0);
+		Lane("gitd_cg", true, 1, 0, 0, 0, 140, 0, 0.85, 0);
+		GITD_Util.SetB("gitd_lock_planes", true);
+		Tex(0.22, 0.055, 0.03, 1.3);
+		// Long-hand rather than Liquid(), which forces a far ramp -- and the
+		// whole point here is that nothing ramps.
+		Lane("gitd_liq", true, 0, 255, 170, 80, 180, 0, 1.20, 0);
+		GITD_Util.SetB("gitd_liq_on", true);
+		GITD_Util.SetB("gitd_liq_walls", true);
+	}
+
+	// 20 -- signature: two different colour SOURCES at once. The floor is keyed
+	// to its own material, so a metal grate glows the same colour map-wide; the
+	// walls are keyed to light level, so the room's own darkness sets their hue.
+	// Every other preset picks one policy and uses it on all four lanes.
+	static void Trawler()
+	{
+		Window(140, 260, 0.40, 0.85, 0.35, 0.95);
+		LightDir(true);
+		Lane("gitd_wf", true, 3, 0, 0, 0,  70, 1, 0.85);
+		Lane("gitd_wc", true, 3, 0, 0, 0,  60, 1, 0.70);
+		Lane("gitd_fg", true, 2, 0, 0, 0, 165, 2, 1.15);
+		Lane("gitd_cg", true, 2, 0, 0, 0, 110, 2, 0.80);
+		Flow(0.45, 14.0, 0.35, 1.6);
+		Tex(0.18, 0.065, 0.03, 1.4);
+		Liquid(true, 0, 60, 200, 160, 190, 2, 1.30, true);
+	}
+
+	// 21 -- signature: reach cut to almost nothing with intensity pushed past
+	// two, so every seam is a hot wire rather than a band and the room is drawn
+	// as line art. The only preset whose glow stops being illumination.
+	static void Filament()
+	{
+		Window(0, 360, 0.90, 1.00, 0.90, 1.00);
+		Lane("gitd_wf", true, 1, 0, 0, 0, 18, 3, 2.80);
+		Lane("gitd_wc", true, 1, 0, 0, 0, 14, 3, 2.60);
+		Lane("gitd_fg", true, 1, 0, 0, 0, 26, 3, 3.00);
+		Lane("gitd_cg", true, 1, 0, 0, 0, 20, 3, 2.60);
+		Throb(0.15, 0.30, 0.18);
+		Liquid(true, 0, 255, 255, 255, 40, 3, 3.00, true);
+	}
+
+	// 22 -- signature: a wave with ZERO reach depth. It moves brightness and
+	// the colour boundary only, so no edge ever travels -- the room breathes
+	// without anything moving. Spherical distance, so it crosses floor, wall
+	// and ceiling as one surface instead of arriving per plane.
+	static void Tide()
+	{
+		Window(165, 205, 0.35, 0.65, 0.50, 0.95);
+		Lane("gitd_wf", true, 2, 0, 0, 0, 110, 2, 0.90);
+		Lane("gitd_wc", true, 2, 0, 0, 0, 100, 2, 0.75);
+		Lane("gitd_fg", true, 2, 0, 0, 0, 240, 2, 1.05);
+		Lane("gitd_cg", true, 2, 0, 0, 0, 180, 2, 0.80);
+		Wave(520, 0.18, 1.2, 4, 0.0, 0.85, 0.65, 0.55, 1.0);
+		Phase(0.0, 0.15, 0.30, 0.45);
+		Cells(0.30, 26.0, 0.06, 0.62);
+		Liquid(true, 0, 70, 210, 200, 220, 2, 1.20, true);
+	}
+
 	static void Apply(int idx)
 	{
 		Base();
@@ -160,6 +247,11 @@ class GITD_Presets
 		case 15: Spore();           break;
 		case 16: Signal();          break;
 		case 17: Prism();           break;
+		case 18: Ascent();          break;
+		case 19: Beacon();          break;
+		case 20: Trawler();         break;
+		case 21: Filament();        break;
+		case 22: Tide();            break;
 		default: VanillaPlus();     break;
 		}
 	}

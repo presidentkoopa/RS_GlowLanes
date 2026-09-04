@@ -82,7 +82,7 @@ class GITD_Handler : EventHandler
 	// slow enough that the check itself is free.
 	const POLL_TICS = 5;
 
-	const PRESET_COUNT = 18;
+	const PRESET_COUNT = 23;
 
 	// Per-lane hash salts, so a sector's four lanes do not all land on the
 	// same colour under the hashed policies.

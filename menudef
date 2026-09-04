@@ -4,6 +4,15 @@
 // about a fifth of a second; the wave and surface-detail pages take effect on
 // the next tic.
 
+OptionValue "GITD_WaveShape"
+{
+	1, "Radial (ground plane)"
+	2, "Plane along X"
+	3, "Plane along Z"
+	4, "Spherical"
+	5, "Vertical (rises)"
+}
+
 OptionValue "GITD_Texture"
 {
 	 0, "From the preset"
@@ -43,6 +52,11 @@ OptionValue "GITD_Preset"
 	15, "Spore"
 	16, "Signal"
 	17, "Prism"
+	18, "Ascent"
+	19, "Beacon"
+	20, "Trawler"
+	21, "Filament"
+	22, "Tide"
 }
 
 OptionValue "GITD_OnDeath"
@@ -277,7 +291,7 @@ OptionMenu "GITDWave"
 	Slider "Wavelength", "gitd_wave_len", 0, 800, 10, 0
 	Slider "Speed", "gitd_wave_speed", 0, 4, 0.05, 2
 	Slider "Sharpness", "gitd_wave_sharp", 0, 8, 0.1, 1
-	Slider "Shape", "gitd_wave_shape", 0, 4, 1, 0
+	Option "Shape", "gitd_wave_shape", "GITD_WaveShape"
 	StaticText ""
 	StaticText "What the wave moves:"
 	Slider "  Reach", "gitd_wave_reach", 0, 1, 0.02, 2
