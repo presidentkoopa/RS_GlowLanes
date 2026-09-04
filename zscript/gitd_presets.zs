@@ -125,9 +125,9 @@ class GITD_Presets
 		LightDir(true);
 		Wave(0, 1, 1, 0, 0, 0, 0, 0, 0);
 		Phase(0, 0, 0, 0);
-		Tex(0, 1, 0, 1);
-		Flow(0, 1, 1, 1);
-		Cells(0, 1, 1, 0.5);
+		Tex(0, 0.06, 0, 1);
+		Flow(0, 12, 1, 1);
+		Cells(0, 24, 1, 0.5);
 		Throb(0, 0);
 		Origin(0);
 		GITD_Util.SetB("gitd_lock_planes", false);
@@ -182,7 +182,7 @@ class GITD_Presets
 		Lane("gitd_wc", false, 2, 0, 0, 0,   0, 0, 0.00);
 		Lane("gitd_fg", true,  2, 0, 0, 0, 140, 2, 1.20);
 		Lane("gitd_cg", true,  2, 0, 0, 0,  90, 2, 0.70);
-		Cells(0.70, 1.6, 0.25, 0.45);
+		Cells(0.70, 20.0, 0.25, 0.45);
 		Wave(220, 0.35, 0.6, 0, 0.30, 0.40, 0.20);
 		Liquid(true, 0, 40, 255, 190, 180, 2, 1.5, true);
 	}
@@ -195,7 +195,7 @@ class GITD_Presets
 		Lane("gitd_wc", true, 0, 255,  90,  20,  70, 1, 1.00);
 		Lane("gitd_fg", true, 0, 255, 120,  25, 110, 1, 1.10);
 		Lane("gitd_cg", true, 0, 200,  70,  15,  80, 1, 0.80);
-		Flow(0.80, 0.6, 0.9, 1.4);
+		Flow(0.80, 44.0, 0.9, 1.4);
 		Wave(160, 1.2, 1.0, 1, 0.35, 0.60, 0.15);
 		Phase(0.0, 0.5, 0.0, 0.5);
 		Liquid(true, 0, 255, 110, 20, 200, 1, 1.8, true);
@@ -209,7 +209,7 @@ class GITD_Presets
 		Lane("gitd_wc", true, 1, 0, 0, 0,  70, 3, 1.40);
 		Lane("gitd_fg", true, 1, 0, 0, 0,  80, 3, 1.40);
 		Lane("gitd_cg", true, 1, 0, 0, 0,  70, 3, 1.40);
-		Tex(0.15, 2.0, 0.0, 1.6);
+		Tex(0.15, 0.070, 0.0, 1.6);
 	}
 
 	// 4 -- signature: light-keyed inverted, so the darkest rooms burn warmest.
@@ -221,7 +221,7 @@ class GITD_Presets
 		Lane("gitd_wc", true,  3, 0, 0, 0,  45, 1, 0.50);
 		Lane("gitd_fg", true,  3, 0, 0, 0, 120, 1, 0.90);
 		Lane("gitd_cg", false, 3, 0, 0, 0,   0, 0, 0.00);
-		Tex(0.35, 1.2, 0.15, 1.2);
+		Tex(0.35, 0.045, 0.15, 1.2);
 		Throb(0.25, 0.50);
 		Liquid(true, 0, 255, 90, 20, 180, 1, 1.5, true);
 	}
@@ -235,7 +235,7 @@ class GITD_Presets
 		Lane("gitd_wc", true, 2, 0, 0, 0,  90, 2, 0.50);
 		Lane("gitd_fg", true, 2, 0, 0, 0, 220, 2, 0.80);
 		Lane("gitd_cg", true, 2, 0, 0, 0, 160, 2, 0.60);
-		Cells(0.35, 3.0, 0.08, 0.70);
+		Cells(0.35, 32.0, 0.08, 0.70);
 		Liquid(true, 0, 150, 220, 255, 200, 2, 0.9, true);
 	}
 
@@ -248,7 +248,7 @@ class GITD_Presets
 		Lane("gitd_wc", true, 2, 0, 0, 0,  70, 3, 1.10);
 		Lane("gitd_fg", true, 2, 0, 0, 0, 110, 3, 1.20);
 		Lane("gitd_cg", true, 2, 0, 0, 0,  90, 3, 0.90);
-		Tex(0.80, 2.5, 0.05, 3.0);
+		Tex(0.80, 0.085, 0.05, 3.0);
 		Liquid(true, 0, 190, 90, 255, 170, 3, 1.6, true);
 	}
 
@@ -298,8 +298,8 @@ class GITD_Presets
 		Lane("gitd_wc", true, 2, 0, 0, 0,  60, 3, 1.10);
 		Lane("gitd_fg", true, 2, 0, 0, 0,  90, 3, 1.20);
 		Lane("gitd_cg", true, 2, 0, 0, 0,  80, 3, 1.00);
-		Flow(1.00, 0.18, 0.9, 3.0);
-		Tex(0.10, 1.0, 0.0, 1.4);
+		Flow(1.00, 12.0, 0.9, 3.0);
+		Tex(0.10, 0.040, 0.0, 1.4);
 	}
 
 	// 11 -- signature: wave detune with a seed, so the bands lose phase with
@@ -312,7 +312,7 @@ class GITD_Presets
 		Lane("gitd_fg", true, 1, 0, 0, 0, 200, 1, 1.00);
 		Lane("gitd_cg", true, 1, 0, 0, 0, 140, 1, 0.80);
 		Wave(300, 0.40, 0.7, 2, 0.60, 0.50, 0.50, 0.70, 12.0);
-		Cells(0.20, 4.0, 0.12, 0.80);
+		Cells(0.20, 34.0, 0.12, 0.80);
 	}
 
 	// 12 -- signature: light-keyed FORWARD (the opposite of Ember) plus a fast
@@ -325,7 +325,7 @@ class GITD_Presets
 		Lane("gitd_wc", true, 3, 0, 0, 0,  65, 1, 1.00);
 		Lane("gitd_fg", true, 3, 0, 0, 0, 130, 1, 1.20);
 		Lane("gitd_cg", true, 3, 0, 0, 0, 100, 1, 0.90);
-		Tex(0.25, 0.8, 0.30, 1.5);
+		Tex(0.25, 0.030, 0.30, 1.5);
 		Throb(0.50, 0.70, 0.35);
 		Liquid(true, 0, 255, 70, 15, 210, 1, 1.9, true);
 	}
@@ -341,8 +341,8 @@ class GITD_Presets
 		Lane("gitd_wc", true, 1, 0, 0, 0,  70, 1, 0.90, 2, 20,  3,  5);
 		Lane("gitd_fg", true, 1, 0, 0, 0, 200, 1, 1.30, 2, 30,  5,  7);
 		Lane("gitd_cg", true, 1, 0, 0, 0, 120, 1, 0.90, 2, 18,  3,  5);
-		Cells(0.45, 2.2, 0.15, 0.55);
-		Tex(0.50, 1.4, 0.08, 1.8);
+		Cells(0.45, 22.0, 0.15, 0.55);
+		Tex(0.50, 0.055, 0.08, 1.8);
 		Liquid(true, 0, 200, 20, 25, 240, 1, 1.60, true);
 	}
 
@@ -368,7 +368,7 @@ class GITD_Presets
 		Lane("gitd_wc", false, 2, 0, 0, 0,   0, 0, 0.00);
 		Lane("gitd_fg", true,  2, 0, 0, 0, 130, 2, 0.70);
 		Lane("gitd_cg", true,  2, 0, 0, 0,  90, 2, 0.45);
-		Cells(0.90, 6.0, 0.05, 0.25);
+		Cells(0.90, 12.0, 0.05, 0.25);
 		Liquid(true, 0, 140, 190, 60, 150, 2, 0.9, false);
 	}
 

@@ -169,7 +169,13 @@ class GITD_Handler : EventHandler
 		bool texChanged    = (wantTex != GITD_Util.GetI("gitd_texture_applied", -2));
 		if (!presetChanged && !texChanged) return;
 
-		if (presetChanged)
+		// Re-apply the palette when the PRESET changes -- and also when the
+		// texture selection returns to "from the preset". Apply(T_PRESET) is
+		// deliberately a no-op, which is only correct if the preset was
+		// re-applied on the same pass. Without this, choosing a texture and
+		// then choosing "from the preset" left the chosen texture live
+		// forever: the menu option was a one-way door.
+		if (presetChanged || (texChanged && wantTex == GITD_Textures.T_PRESET))
 		{
 			GITD_Presets.Apply(want);
 			GITD_Util.SetI("gitd_preset_applied", want);
@@ -185,18 +191,28 @@ class GITD_Handler : EventHandler
 		if (mode == 0) return;
 		if (!e || !e.Thing || !e.Thing.player) return;
 
+		// DRAWN ON EVERY PEER, USED ON ONE. random() is the SYNCHRONISED
+		// playsim RNG -- the generator the simulation itself runs on. Drawing
+		// from it inside the consoleplayer test meant one machine consumed a
+		// number the others did not, which desyncs every RNG decision after it
+		// and poisons the state written into savegames.
+		//
+		// WorldThingDied fires identically on all peers and both guards above
+		// read peer-identical state, so drawing here costs the same rolls
+		// everywhere. Only the USE of them is local.
+		int cur = GITD_Util.GetI("gitd_preset", 1);
+		// An offset rather than a flat pick, so it can never land on the
+		// preset already showing -- a one-in-eighteen chance of a death that
+		// visibly did nothing.
+		int rollPreset = (cur + random(1, PRESET_COUNT - 1)) % PRESET_COUNT;
+		int rollSeed = random(0, 9999);
+
 		// Only the player whose screen this is. In co-op every death would
 		// otherwise restyle the map for everyone.
 		if (e.Thing.player != players[consoleplayer]) return;
 
-		if (mode == 2)
-		{
-			GITD_Util.SetI("gitd_preset", random(1, PRESET_COUNT - 1));
-		}
-		else
-		{
-			GITD_Util.SetI("gitd_seed", random(0, 9999));
-		}
+		if (mode == 2) GITD_Util.SetI("gitd_preset", rollPreset);
+		else           GITD_Util.SetI("gitd_seed", rollSeed);
 
 		// Either path changes the settings hash, so the next poll re-applies
 		// on its own.
@@ -292,9 +308,16 @@ class GITD_Handler : EventHandler
 	// walks the map in chunks. Idle menus cost one hash.
 	override void UiTick()
 	{
-		PushGlobals();
-
+		// PUSHED AFTER THE ENABLED TEST, NOT BEFORE IT.
+		//
+		// These are LEVEL-global render settings shared with every other mod
+		// and with any map using its own sector glow. Pushing them first meant
+		// that on the tic the mod was switched off ClearAll zeroed them and
+		// the very next tic put them all back -- so a disabled GlowInTheDark
+		// went on imposing its wave, grain, flow, cells and alarm pulse on
+		// everybody else's glow forever.
 		bool enabled = GITD_Util.GetB("gitd_enabled", true);
+		if (enabled) PushGlobals();
 
 		if (!enabled)
 		{

@@ -307,19 +307,19 @@ OptionMenu "GITDDetail"
 	StaticText ""
 	StaticText "Noise"
 	Slider "  Amount", "gitd_tex_noise", 0, 1, 0.02, 2
-	Slider "  Scale", "gitd_tex_scale", 0, 8, 0.1, 1
+	Slider "  Grain fineness", "gitd_tex_scale", 0, 0.5, 0.005, 3
 	Slider "  Drift", "gitd_tex_drift", 0, 1, 0.02, 2
 	Slider "  Contrast", "gitd_tex_contrast", 0, 4, 0.05, 2
 	StaticText ""
 	StaticText "Flow"
 	Slider "  Amount", "gitd_flow", 0, 1, 0.02, 2
-	Slider "  Spacing", "gitd_flow_spacing", 0, 4, 0.02, 2
+	Slider "  Spacing (map units)", "gitd_flow_spacing", 0, 48, 0.5, 1
 	Slider "  Speed", "gitd_flow_speed", 0, 4, 0.05, 2
 	Slider "  Sharpness", "gitd_flow_sharp", 0, 6, 0.1, 1
 	StaticText ""
 	StaticText "Cells"
 	Slider "  Amount", "gitd_cell", 0, 1, 0.02, 2
-	Slider "  Scale", "gitd_cell_scale", 0, 8, 0.1, 1
+	Slider "  Cell size (map units)", "gitd_cell_scale", 0, 48, 0.5, 1
 	Slider "  Speed", "gitd_cell_speed", 0, 2, 0.01, 2
 	Slider "  Width", "gitd_cell_width", 0, 1, 0.02, 2
 	StaticText ""

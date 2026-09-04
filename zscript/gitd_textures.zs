@@ -66,9 +66,9 @@ class GITD_Textures
 	// is how you get a preset wearing half of the last one.
 	static void Clear()
 	{
-		Grain(0.0, 1.0, 0.0, 1.0);
-		Flow(0.0, 0.5, 1.0, 1.0);
-		Cells(0.0, 2.0, 0.2, 0.5);
+		Grain(0.0, 0.06, 0.0, 1.0);
+		Flow(0.0, 12.0, 1.0, 1.0);
+		Cells(0.0, 24.0, 0.2, 0.5);
 	}
 
 	static void Apply(int idx)
@@ -82,40 +82,40 @@ class GITD_Textures
 		case T_NONE:      break;
 
 		// ---- grain -------------------------------------------------------
-		case T_GRAIN:     Grain(0.25, 2.0, 0.02, 1.6); break;
-		case T_DIRT:      Grain(0.80, 2.5, 0.05, 3.0); break;   // Blacklight's
+		case T_GRAIN:     Grain(0.25, 0.070, 0.02, 1.6); break;
+		case T_DIRT:      Grain(0.80, 0.085, 0.05, 3.0); break;   // Blacklight's
 
 		// ---- flow: the line looks ----------------------------------------
 		// Tight spacing plus high sharpness is what makes a band read as a
 		// LINE rather than as a gradient. This is the term that was in one
 		// preset only.
-		case T_SCANLINES: Flow(0.90, 0.09, 0.5, 4.0); break;   // fine, dense, slow
-		case T_TRACES:    Flow(1.00, 0.18, 0.9, 3.0); break;   // Circuitry's
-		case T_PULSEBAND: Flow(0.70, 0.55, 1.1, 1.3); break;   // wide soft sweep
+		case T_SCANLINES: Flow(0.90, 7.0, 0.5, 4.0); break;   // fine, dense, slow
+		case T_TRACES:    Flow(1.00, 12.0, 0.9, 3.0); break;   // Circuitry's
+		case T_PULSEBAND: Flow(0.70, 40.0, 1.1, 1.3); break;   // wide soft sweep
 
 		// ---- cells: the crack looks --------------------------------------
 		// Small cells with narrow edges read as a crazed surface; large cells
 		// with wide edges read as frost or as leather.
-		case T_CRACKS:    Cells(0.85, 5.0, 0.04, 0.28); break;
-		case T_CRAZED:    Cells(0.95, 7.5, 0.03, 0.18); break;   // finer, harder
-		case T_FROST:     Cells(0.40, 3.0, 0.08, 0.70); break;   // Frostbite's
-		case T_MOTTLE:    Cells(0.50, 2.0, 0.15, 0.55); break;
-		case T_SCALES:    Cells(0.70, 1.6, 0.10, 0.40); break;
+		case T_CRACKS:    Cells(0.85, 22.0, 0.04, 0.28); break;
+		case T_CRAZED:    Cells(0.95, 14.0, 0.03, 0.18); break;   // finer, harder
+		case T_FROST:     Cells(0.40, 30.0, 0.08, 0.70); break;   // Frostbite's
+		case T_MOTTLE:    Cells(0.50, 24.0, 0.15, 0.55); break;
+		case T_SCALES:    Cells(0.70, 18.0, 0.10, 0.40); break;
 
 		// ---- layered: two terms at once ----------------------------------
 		// Grain under structure. Only Hellscape ever did this and it is most
 		// of why it reads as a material rather than as a pattern.
 		case T_ETCHED:
-			Grain(0.18, 3.0, 0.01, 2.0);
-			Flow(0.75, 0.12, 0.4, 3.5);
+			Grain(0.18, 0.100, 0.01, 2.0);
+			Flow(0.75, 9.0, 0.4, 3.5);
 			break;
 		case T_CORRODED:
-			Grain(0.45, 1.4, 0.06, 1.8);
-			Cells(0.55, 4.0, 0.05, 0.30);
+			Grain(0.45, 0.050, 0.06, 1.8);
+			Cells(0.55, 26.0, 0.05, 0.30);
 			break;
 		case T_WEAVE:
-			Flow(0.55, 0.16, 0.6, 2.6);
-			Cells(0.45, 3.2, 0.06, 0.35);
+			Flow(0.55, 11.0, 0.6, 2.6);
+			Cells(0.45, 28.0, 0.06, 0.35);
 			break;
 		}
 	}
