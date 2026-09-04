@@ -4,6 +4,25 @@
 // about a fifth of a second; the wave and surface-detail pages take effect on
 // the next tic.
 
+OptionValue "GITD_Texture"
+{
+	 0, "From the preset"
+	 1, "None"
+	 2, "Grain"
+	 3, "Dirt"
+	 4, "Scanlines"
+	 5, "Circuit traces"
+	 6, "Pulse bands"
+	 7, "Cracks"
+	 8, "Crazed"
+	 9, "Frost"
+	10, "Mottle"
+	11, "Scales"
+	12, "Etched (grain + lines)"
+	13, "Corroded (grain + cracks)"
+	14, "Weave (lines + cells)"
+}
+
 OptionValue "GITD_Preset"
 {
 	 0, "Vanilla+"
@@ -92,6 +111,23 @@ OptionMenu "GITDMain"
 	StaticText "reach reopens the corner it just closed.", "gold"
 	StaticText ""
 	Option "Preset", "gitd_preset", "GITD_Preset"
+	Option "Texture", "gitd_texture", "GITD_Texture"
+	StaticText "The surface, chosen separately from the palette.", "gray"
+	StaticText "\"From the preset\" is how it always was. Anything", "gray"
+	StaticText "else lands on top of whichever preset you picked,", "gray"
+	StaticText "so the traces and the cracks are no longer stuck", "gray"
+	StaticText "inside Circuitry and Spore.", "gray"
+	StaticText ""
+	Slider "Overall speed", "gitd_speed", 0.0, 2.0, 0.05, 2
+	Slider "Throb speed", "gitd_pulse_rate", 0.0, 2.0, 0.05, 2
+	StaticText "How fast an alarming room beats, separately from", "gray"
+	StaticText "how hard. Bright and slow was not askable for", "gray"
+	StaticText "before -- the engine worked the speed out from the", "gray"
+	StaticText "strength, so RedAlert strobed. 0 holds it steady.", "gray"
+	StaticText "Scales every moving part at once -- the wave, the", "gray"
+	StaticText "flow and the cells -- on top of whatever the preset", "gray"
+	StaticText "chose, so a preset you like but find too busy is one", "gray"
+	StaticText "slider rather than three. 1.00 is the preset as built.", "gray"
 	Option "Shuffle preset each map", "gitd_shuffle", "OnOff"
 	Option "Randomize on death", "gitd_ondeath", "GITD_OnDeath"
 	StaticText "A preset overwrites every setting below.", "gold"

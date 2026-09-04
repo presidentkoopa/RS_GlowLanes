@@ -155,12 +155,28 @@ class GITD_Handler : EventHandler
 		SyncPreset();
 	}
 
+	// The preset picks the palette, the texture layer picks the surface, and
+	// the texture is applied AFTER so it lands on top of whatever the preset
+	// chose. A preset writes the texture cvars as part of its own look, so any
+	// preset change has to be followed by the texture override again or the
+	// chosen texture would silently revert on the next preset switch.
 	clearscope static void SyncPreset()
 	{
-		int want = GITD_Util.GetI("gitd_preset", 1);
-		if (want == GITD_Util.GetI("gitd_preset_applied", -1)) return;
-		GITD_Presets.Apply(want);
-		GITD_Util.SetI("gitd_preset_applied", want);
+		int want    = GITD_Util.GetI("gitd_preset", 1);
+		int wantTex = GITD_Util.GetI("gitd_texture", 0);
+
+		bool presetChanged = (want != GITD_Util.GetI("gitd_preset_applied", -1));
+		bool texChanged    = (wantTex != GITD_Util.GetI("gitd_texture_applied", -2));
+		if (!presetChanged && !texChanged) return;
+
+		if (presetChanged)
+		{
+			GITD_Presets.Apply(want);
+			GITD_Util.SetI("gitd_preset_applied", want);
+		}
+
+		GITD_Textures.Apply(wantTex);
+		GITD_Util.SetI("gitd_texture_applied", wantTex);
 	}
 
 	override void WorldThingDied(WorldEvent e)
@@ -205,9 +221,15 @@ class GITD_Handler : EventHandler
 	{
 		if (!Level) return;
 
+		// One dial over all three animation rates. Applied HERE rather than in
+		// the presets so it rides on top of whatever a preset chose and can be
+		// moved without disturbing it -- and so it still works on hand-tuned
+		// settings that no preset ever touched.
+		double rate = GITD_Util.GetF("gitd_speed", 1.0);
+
 		Level.SetGlowWave(
 			GITD_Util.GetF("gitd_wave_len"),
-			GITD_Util.GetF("gitd_wave_speed", 1.0),
+			GITD_Util.GetF("gitd_wave_speed", 1.0) * rate,
 			GITD_Util.GetF("gitd_wave_sharp", 1.0),
 			GITD_Util.GetI("gitd_wave_shape"));
 
@@ -233,13 +255,13 @@ class GITD_Handler : EventHandler
 		Level.SetGlowFlow(
 			GITD_Util.GetF("gitd_flow"),
 			GITD_Util.GetF("gitd_flow_spacing", 1.0),
-			GITD_Util.GetF("gitd_flow_speed", 1.0),
+			GITD_Util.GetF("gitd_flow_speed", 1.0) * rate,
 			GITD_Util.GetF("gitd_flow_sharp", 1.0));
 
 		Level.SetGlowCells(
 			GITD_Util.GetF("gitd_cell"),
 			GITD_Util.GetF("gitd_cell_scale", 1.0),
-			GITD_Util.GetF("gitd_cell_speed", 1.0),
+			GITD_Util.GetF("gitd_cell_speed", 1.0) * rate,
 			GITD_Util.GetF("gitd_cell_width", 0.5));
 
 		// react only scales the engine's fog-disturbance array, which this mod
@@ -249,7 +271,8 @@ class GITD_Handler : EventHandler
 		Level.SetGlowReact(
 			GITD_Util.GetF("gitd_react"),
 			GITD_Util.GetF("gitd_pulse"),
-			GITD_Util.GetF("gitd_pulse_level"));
+			GITD_Util.GetF("gitd_pulse_level"),
+			GITD_Util.GetF("gitd_pulse_rate", 1.0) * rate);
 	}
 
 	// Runs while the game is paused and while the menu is open, which
@@ -297,7 +320,8 @@ class GITD_Handler : EventHandler
 		// Tracked separately from WorldTick's lastPreset: that is play state and
 		// UI may not write it. Both sides applying is harmless -- Apply only
 		// writes CVars, and each fires once per change it has not seen.
-		SyncPreset();
+		SyncPreset();
+
 
 		// A fresh level starts with its glow unset, so a new map has to be
 		// re-applied even when not one setting moved and the hash therefore

@@ -93,11 +93,15 @@ class GITD_Presets
 	// react is inert here by design -- it only scales the engine's
 	// fog-disturbance array, which this mod never populates. The throb comes
 	// from pulse/level. See vmthunks.cpp:4125.
-	static void Throb(double pulse, double level)
+	// `rate` scales the beat independently of `level`. The engine works the
+	// throb's speed out from the level, so without this a preset that wanted a
+	// bright alarm had no way to ask for a slow one.
+	static void Throb(double pulse, double level, double rate = 1.0)
 	{
 		GITD_Util.SetF("gitd_react", 0.0);
 		GITD_Util.SetF("gitd_pulse", pulse);
 		GITD_Util.SetF("gitd_pulse_level", level);
+		GITD_Util.SetF("gitd_pulse_rate", rate);
 	}
 
 	static void Liquid(bool on, int policy, int r, int g, int b,
@@ -191,7 +195,7 @@ class GITD_Presets
 		Lane("gitd_wc", true, 0, 255,  90,  20,  70, 1, 1.00);
 		Lane("gitd_fg", true, 0, 255, 120,  25, 110, 1, 1.10);
 		Lane("gitd_cg", true, 0, 200,  70,  15,  80, 1, 0.80);
-		Flow(0.80, 0.6, 1.6, 1.4);
+		Flow(0.80, 0.6, 0.9, 1.4);
 		Wave(160, 1.2, 1.0, 1, 0.35, 0.60, 0.15);
 		Phase(0.0, 0.5, 0.0, 0.5);
 		Liquid(true, 0, 255, 110, 20, 200, 1, 1.8, true);
@@ -269,7 +273,7 @@ class GITD_Presets
 		Lane("gitd_wc", true, 0, 170, 220, 255,  70, 0, 0.80);
 		Lane("gitd_fg", true, 0, 190, 235, 255, 130, 0, 1.10);
 		Lane("gitd_cg", true, 0, 150, 200, 255, 100, 0, 0.80);
-		Wave(120, 2.0, 1.8, 0, 0.50, 0.90, 0.40);
+		Wave(120, 1.0, 1.8, 0, 0.50, 0.90, 0.40);
 		Origin(1);
 	}
 
@@ -282,7 +286,7 @@ class GITD_Presets
 		Lane("gitd_fg", true, 0, 64, 64, 66,  70, 0, 0.30);
 		Lane("gitd_cg", true, 0, 64, 64, 66,  60, 0, 0.25);
 		Liquid(true, 0, 90, 255, 60, 220, 3, 2.00, true);
-		Throb(0.20, 0.40);
+		Throb(0.20, 0.40, 0.60);
 	}
 
 	// 10 -- signature: flow at very tight spacing and high sharpness, so it
@@ -322,7 +326,7 @@ class GITD_Presets
 		Lane("gitd_fg", true, 3, 0, 0, 0, 130, 1, 1.20);
 		Lane("gitd_cg", true, 3, 0, 0, 0, 100, 1, 0.90);
 		Tex(0.25, 0.8, 0.30, 1.5);
-		Throb(0.50, 0.70);
+		Throb(0.50, 0.70, 0.35);
 		Liquid(true, 0, 255, 70, 15, 210, 1, 1.9, true);
 	}
 
@@ -351,7 +355,7 @@ class GITD_Presets
 		Lane("gitd_wc", true, 0, 255, 20, 25,  80, 3, 1.50);
 		Lane("gitd_fg", true, 0, 255, 25, 30, 100, 3, 1.50);
 		Lane("gitd_cg", true, 0, 255, 20, 25,  90, 3, 1.40);
-		Throb(0.85, 0.90);
+		Throb(0.85, 0.90, 0.30);
 		Liquid(true, 0, 255, 40, 40, 160, 3, 1.7, true);
 	}
 
@@ -376,7 +380,7 @@ class GITD_Presets
 		Lane("gitd_wc", true, 0, 255, 180, 40,  75, 3, 1.30);
 		Lane("gitd_fg", true, 0, 255, 190, 60, 110, 3, 1.20);
 		Lane("gitd_cg", true, 0, 255, 170, 30,  90, 3, 1.00);
-		Wave(180, 1.4, 4.0, 1, 0.70, 1.00, 0.00);
+		Wave(180, 0.85, 4.0, 1, 0.70, 1.00, 0.00);
 		Phase(0.0, 0.5, 0.25, 0.75);
 	}
 

@@ -16,6 +16,17 @@
 // ---------------------------------------------------------------- master --
 server bool  gitd_enabled      = true;
 server int   gitd_preset       = 1;
+
+// SURFACE TEXTURE, CHOSEN SEPARATELY FROM THE PRESET.
+//
+// The grain, the scanlines and the cracks used to belong to whichever preset
+// included them, which made the best-looking part of the effect the hardest to
+// reach -- the tight traces existed only inside Circuitry and the crazed
+// cracks only inside Spore.
+//
+// 0 leaves whatever the preset chose, which is exactly the old behaviour and
+// is the default. Anything else lands on top of whatever palette is underneath.
+server int   gitd_texture      = 0;
 server bool  gitd_shuffle      = false;
 server int   gitd_ondeath      = 0;       // 0 off, 1 new colours, 2 new preset
 
@@ -109,6 +120,16 @@ server bool  gitd_liq_walls     = true;   // also push it up the wall (wf lane)
 // ------------------------------------------------------------------ wave --
 // Per-pixel peaks and valleys along a glow. Wavelength 0 = off.
 server float gitd_wave_len       = 0.0;
+// ONE DIAL OVER ALL THE MOTION. Every animated part of the glow -- the wave
+// travelling along a lane, the flow crawling down it, the cells blinking --
+// has its own speed, and a preset sets all three to suit its own look. This
+// scales whatever the preset chose, so "I like this preset but it is too
+// busy" is one slider rather than three, and the preset's balance between the
+// three is preserved instead of being flattened.
+//
+// 1.0 is the preset exactly as authored.
+server float gitd_speed          = 1.0;
+
 server float gitd_wave_speed     = 1.0;
 server float gitd_wave_sharp     = 1.0;
 server int   gitd_wave_shape     = 0;
@@ -147,7 +168,27 @@ server float gitd_cell_width    = 0.5;
 server float gitd_react         = 0.0;
 server float gitd_pulse         = 0.0;
 server float gitd_pulse_level   = 0.0;
+// HOW FAST IT BEATS, separately from how hard. The engine derives the throb
+// rate from the LEVEL, so asking for a bright alarm used to force a fast one
+// -- RedAlert beat about twice a second at nearly full depth, which is a
+// strobe rather than a pulse. 1.0 is the old rate.
+server float gitd_pulse_rate    = 1.0;
 
 // Internal. The preset index last applied, so a preset only re-applies when
 // it CHANGES -- not on every map load, which used to wipe slider tweaks.
-server int   gitd_preset_applied = -1;
+//
+// NOSAVE, NOT SERVER, and the distinction is load-bearing. A server cvar is
+// not written locally when you set it: the write is queued to the network and
+// the value only appears after it round-trips through tic processing. This is
+// read back one tic later by SyncPreset as an "already applied" flag, so as a
+// server cvar it still reads -1 on the next tic and the whole preset re-applies
+// -- 54 more cvar writes, which delays the round trip further, which causes
+// more passes. It compounded until the tic's net buffer overflowed and the
+// game died with "Attempted to write past end of stream".
+//
+// nosave (CVAR_CONFIG_ONLY) keeps the one property this actually needs -- it
+// survives the handler being rebuilt per map -- while writing immediately and
+// never touching the wire. Nothing else should ever see this value.
+nosave int   gitd_preset_applied = -1;
+// Same reasoning as gitd_preset_applied above -- nosave, not server.
+nosave int   gitd_texture_applied = -2;
